@@ -27,6 +27,12 @@
     #health { color: #ff8378; letter-spacing: 2px; }
     #hotbar { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); display: flex; gap: 7px; padding: 8px; }
     .slot { width: 62px; height: 58px; display: grid; place-items: center; position: relative; border: 1px solid #ffffff2c; border-radius: 8px; background: #263240dc; font-size: 23px; }
+    .weapon-icon { width: 34px; height: 25px; margin-top: 5px; overflow: visible; filter: drop-shadow(0 2px 2px #0009); }
+    .weapon-icon .gun-body { fill: #d5e0e8; }
+    .weapon-icon .gun-detail { fill: #f4d77d; }
+    .weapon-icon .gun-dark { fill: #263240; }
+    .weapon-icon .gun-glow { fill: #8de9ff; }
+    .slot.active .weapon-icon { filter: drop-shadow(0 0 5px #f4d77d99); }
     .slot.active { border: 2px solid #f4d77d; background: #493e2c; box-shadow: 0 0 16px #ffd76c55; }
     .slot span { position: absolute; left: 5px; top: 1px; color: #ccd5df; font-size: 10px; }
     .slot b { position: absolute; right: 5px; bottom: 2px; font-size: 11px; }
@@ -69,7 +75,10 @@
     #username, .login-input { width: 100%; margin-top: 9px; padding: 9px 11px; border: 1px solid #ffffff30; border-radius: 7px; outline: none; color: #f4f3e9; background: #17232f; font: inherit; }
     #username:focus { border-color: #8de9ff; }
     .login-input:focus { border-color: #8de9ff; }
-    #login-error { min-height: 1.4em; color: #ff8378 !important; }
+    #login-error, #register-error { min-height: 1.4em; color: #ff8378 !important; }
+    #register-success { min-height: 1.4em; color: #91e5a7 !important; }
+    .secondary-button { background: transparent; color: #8de9ff; border: 1px solid #8de9ff; margin-top: 10px; }
+    .secondary-button:hover { background: rgba(141, 233, 255, .08); }
     [hidden] { display: none !important; }
     #player-name { color: #8de9ff; }
     body.locked { cursor: none; }
@@ -102,8 +111,8 @@
     <div><span class="stat-label">Nightfall</span> <b id="clock">☀ Day</b></div>
   </div>
   <div id="hotbar" class="panel">
-    <div class="slot active" data-slot="1" title="Primary weapon"><span>1</span>🔫<b id="primary-label">AR</b></div>
-    <div class="slot" data-slot="2" title="Handgun"><span>2</span>🔫<b>PISTOL</b></div>
+    <div class="slot active" data-slot="1" title="Primary weapon"><span>1</span><svg class="weapon-icon" viewBox="0 0 64 40" role="img" aria-label="Assault rifle"><path class="gun-body" d="M7 13h27l7 4h13v6H42l-5 5H23l-4-5H8z"/><path class="gun-dark" d="M11 18h10v3H11zm23-2h5v5h-5zM27 27h8l-2 9h-5zM49 18h11v3H49z"/><path class="gun-detail" d="M23 13h8v3h-8zm-8 12h5v3h-5z"/><path class="gun-glow" d="M39 18h4v3h-4z"/></svg><b id="primary-label">AR</b></div>
+    <div class="slot" data-slot="2" title="Handgun"><span>2</span><svg class="weapon-icon" viewBox="0 0 64 40" role="img" aria-label="Pistol"><path class="gun-body" d="M11 13h33l6 4h5v6H38l-3 4H23l-2-4h-7z"/><path class="gun-dark" d="M17 17h23v3H17zm13 10h8l-2 9h-5zM48 18h8v3h-8z"/><path class="gun-detail" d="M24 13h11v3H24z"/><path class="gun-glow" d="M40 17h5v3h-5z"/></svg><b>PISTOL</b></div>
     <div class="slot" data-slot="3" title="Knife"><span>3</span>🗡️<b>KNIFE</b></div>
     <div class="slot" data-slot="4" title="Bomb"><span>4</span>💣<b id="bomb-count">3</b></div>
   </div>
@@ -121,6 +130,19 @@
         <input id="login-password" class="login-input" type="password" autocomplete="current-password" placeholder="Password" aria-label="Password" required>
         <p id="login-error" role="alert" aria-live="polite"></p>
         <button type="submit">LOG IN</button>
+        <button type="button" id="show-register" class="secondary-button">CREATE ACCOUNT</button>
+      </form>
+      <form id="register-panel" hidden>
+        <div class="eyebrow">CREATE ACCOUNT</div>
+        <h2>Join ValKiller</h2>
+        <p>Create a new local account to keep your game progress on this browser.</p>
+        <input id="register-username" class="login-input" type="text" maxlength="32" autocomplete="username" placeholder="Choose a username" aria-label="Choose a username" required>
+        <input id="register-password" class="login-input" type="password" minlength="4" maxlength="64" autocomplete="new-password" placeholder="Choose a password" aria-label="Choose a password" required>
+        <input id="register-confirm-password" class="login-input" type="password" minlength="4" maxlength="64" autocomplete="new-password" placeholder="Confirm password" aria-label="Confirm password" required>
+        <p id="register-error" role="alert" aria-live="polite"></p>
+        <p id="register-success" role="status" aria-live="polite"></p>
+        <button type="submit">CREATE ACCOUNT</button>
+        <button type="button" id="show-login" class="secondary-button">BACK TO LOGIN</button>
       </form>
       <div id="lobby-content" hidden>
         <div class="eyebrow">A mythical voxel shooter</div>
@@ -134,13 +156,30 @@
           <button data-buy="shotgun">SHOTGUN · $1,000</button>
           <button data-buy="burst">BURST RIFLE · $2,000</button>
         </div>
-        <div class="eyebrow">WEAPON SKINS</div>
+        <div class="eyebrow">GUN SKINS · PRIMARY WEAPON</div>
         <div id="skin-shop" class="shop-grid">
           <button data-skin="aurora">Aurora · $500</button>
           <button data-skin="inferno">Inferno · $500</button>
           <button data-skin="emerald">Emerald · $500</button>
           <button data-skin="ruby">Blood Moon · $500</button>
           <button data-skin="sapphire">Sapphire · $500</button>
+          <button data-skin="neon">Neon Pulse · $750</button>
+          <button data-skin="arctic">Arctic Phantom · $750</button>
+          <button data-skin="void">Void Reaper · $750</button>
+          <button data-skin="toxic">Toxic Circuit · $750</button>
+        </div>
+        <div class="eyebrow">ASSAULT RIFLE EXCLUSIVE</div>
+        <div id="ar-skin-shop" class="shop-grid">
+          <button data-skin="dragonfire">Dragon Crest AR · $1,500</button>
+          <button data-skin="solar">Solar Crown · $5,000</button>
+        </div>
+        <div class="eyebrow">PISTOL SKINS</div>
+        <div id="pistol-skin-shop" class="shop-grid">
+          <button data-pistol-skin="ember">Ember Sidearm · $500</button>
+          <button data-pistol-skin="frost">Frostbite · $500</button>
+          <button data-pistol-skin="neon">Neon Strike · $750</button>
+          <button data-pistol-skin="royal">Royal Gold · $750</button>
+          <button data-pistol-skin="dragon">Dragon Fang · $1,000</button>
         </div>
         <label for="custom-weapon-skin" class="eyebrow">CUSTOM WEAPON COLOR</label>
         <input id="custom-weapon-skin" type="color" value="#4edfff" aria-label="Choose weapon skin color">
@@ -192,14 +231,103 @@
       scorePlayerName: document.querySelector("#score-player-name"),
       playerRoundScore: document.querySelector("#player-round-score"), botRoundScore: document.querySelector("#bot-round-score")
     };
-    const authorizedAccounts = new Map([
+    const accountStoreKey = "valkiller-accounts-v1";
+    const defaultAccounts = new Map([
       ["WemmbuMCs", "wemmbu"],
       ["Niko064255", "Hoanggiahuy2014@"]
     ]);
+
+    function loadAccounts() {
+      try {
+        const savedAccounts = JSON.parse(localStorage.getItem(accountStoreKey) || "{}");
+        const merged = new Map(defaultAccounts);
+        Object.entries(savedAccounts).forEach(([username, password]) => merged.set(username, String(password)));
+        return merged;
+      } catch (error) {
+        return new Map(defaultAccounts);
+      }
+    }
+
+    function persistAccounts(accounts) {
+      try {
+        const plainAccounts = Object.fromEntries(accounts.entries());
+        localStorage.setItem(accountStoreKey, JSON.stringify(plainAccounts));
+      } catch (error) {
+        // Ignore storage failures so the game still works in restricted browsers.
+      }
+    }
+
+    const authorizedAccounts = loadAccounts();
     let authenticated = false;
+
+    function setAuthMode(mode) {
+      const loginPanel = document.querySelector("#login-panel");
+      const registerPanel = document.querySelector("#register-panel");
+      const loginError = document.querySelector("#login-error");
+      const registerError = document.querySelector("#register-error");
+      const registerSuccess = document.querySelector("#register-success");
+      const isLoginMode = mode === "login";
+
+      loginPanel.hidden = !isLoginMode;
+      registerPanel.hidden = isLoginMode;
+      loginError.textContent = "";
+      registerError.textContent = "";
+      registerSuccess.textContent = "";
+
+      if (isLoginMode) {
+        document.querySelector("#login-username").focus();
+      } else {
+        document.querySelector("#register-username").focus();
+      }
+    }
+
+    document.querySelector("#show-register").addEventListener("click", () => setAuthMode("register"));
+    document.querySelector("#show-login").addEventListener("click", () => setAuthMode("login"));
+
+    document.querySelector("#register-panel").addEventListener("submit", event => {
+      event.preventDefault();
+      const username = document.querySelector("#register-username").value.trim();
+      const password = document.querySelector("#register-password").value;
+      const confirmPassword = document.querySelector("#register-confirm-password").value;
+      const registerError = document.querySelector("#register-error");
+      const registerSuccess = document.querySelector("#register-success");
+
+      if (username.length < 3 || username.length > 32) {
+        registerError.textContent = "Username must be between 3 and 32 characters.";
+        registerSuccess.textContent = "";
+        return;
+      }
+
+      if (password.length < 4 || password.length > 64) {
+        registerError.textContent = "Password must be between 4 and 64 characters.";
+        registerSuccess.textContent = "";
+        return;
+      }
+
+      if (password !== confirmPassword) {
+        registerError.textContent = "Passwords do not match.";
+        registerSuccess.textContent = "";
+        return;
+      }
+
+      if (authorizedAccounts.has(username)) {
+        registerError.textContent = "This username already exists.";
+        registerSuccess.textContent = "";
+        return;
+      }
+
+      authorizedAccounts.set(username, password);
+      persistAccounts(authorizedAccounts);
+      registerError.textContent = "";
+      registerSuccess.textContent = "Account created successfully!";
+      document.querySelector("#login-username").value = username;
+      document.querySelector("#login-password").value = password;
+      setTimeout(() => setAuthMode("login"), 900);
+    });
+
     document.querySelector("#login-panel").addEventListener("submit", event => {
       event.preventDefault();
-      const username = document.querySelector("#login-username").value;
+      const username = document.querySelector("#login-username").value.trim();
       const password = document.querySelector("#login-password").value;
       const error = document.querySelector("#login-error");
       if (authorizedAccounts.get(username) !== password) {
@@ -255,23 +383,48 @@
     const player = { x: 0, y: 0, vy: 0, z: 0, vx: 0, vz: 0, hp: 5, invuln: 0, crouched: false, slideTimer: 0, slideCooldown: 0, slideX: 0, slideZ: -1, yaw: 0, pitch: 0, fireCooldown: 0, reload: 0, reloadWeapon: "rifle", ammo: { rifle: 30, pistol: 12, sniper: 5, shotgun: 8, burst: 24 }, grenades: 3, burst: 0, facing: new THREE.Vector3(0, 0, -1) };
     const inventory = {
       wood: 0, stone: 0, cash: Infinity, selected: 1, primary: "rifle",
-      owned: new Set(["rifle", "pistol"]), skins: new Set(["classic"]), skin: "classic"
+      owned: new Set(["rifle", "pistol"]), skins: new Set(["classic"]), skin: "classic",
+      pistolSkins: new Set(["classic"]), pistolSkin: "classic"
     };
     const characterSkinColors = { red: "#ef304f", blue: "#287dff" };
     let playerSkinColor = characterSkinColors.blue;
     const shopPrices = { rifle: 0, pistol: 0, sniper: 1500, shotgun: 1000, burst: 2000 };
-    const skinPrices = { aurora: 500, inferno: 500, emerald: 500, ruby: 500, sapphire: 500 };
+    const skinPrices = {
+      aurora: 500, inferno: 500, emerald: 500, ruby: 500, sapphire: 500,
+      dragonfire: 1500, neon: 750, arctic: 750, void: 750, solar: 5000, toxic: 750
+    };
     const skinPalettes = {
       classic: ["#303b53", "#a7d9dd", "#f0d57b"],
       aurora: ["#176d78", "#72f5e2", "#d9fffb"],
       inferno: ["#722f37", "#fa7655", "#ffd273"],
       emerald: ["#24593e", "#71db82", "#dcf28b"],
       ruby: ["#671b36", "#ef304f", "#ffc0d4"],
-      sapphire: ["#153a70", "#3988ff", "#b8e5ff"]
+      sapphire: ["#153a70", "#3988ff", "#b8e5ff"],
+      dragonfire: ["#3b1010", "#e51e24", "#ffb52e", "#f0fbff"],
+      neon: ["#25105a", "#a232ff", "#42f5ff", "#f75cff"],
+      arctic: ["#253b52", "#77c9ed", "#e6fbff", "#8b9cff"],
+      void: ["#171522", "#49344f", "#d14dff", "#8e7bff"],
+      solar: ["#57320d", "#f28c28", "#ffe77a", "#fff5cf"],
+      toxic: ["#183c2a", "#50ba55", "#caff4d", "#72f5c5"]
     };
     const skinNames = {
       aurora: "Aurora", inferno: "Inferno", emerald: "Emerald",
-      ruby: "Blood Moon", sapphire: "Sapphire"
+      ruby: "Blood Moon", sapphire: "Sapphire", dragonfire: "Dragon Crest AR",
+      neon: "Neon Pulse", arctic: "Arctic Phantom", void: "Void Reaper",
+      solar: "Solar Crown", toxic: "Toxic Circuit"
+    };
+    const pistolSkinPrices = { ember: 500, frost: 500, neon: 750, royal: 750, dragon: 1000 };
+    const pistolSkinPalettes = {
+      classic: ["#43536b", "#8feaff", "#dfc76d"],
+      ember: ["#54231b", "#e45b2a", "#ffca58", "#f5e4cc"],
+      frost: ["#263a54", "#63bde8", "#e6fbff", "#9fddff"],
+      neon: ["#25105a", "#a232ff", "#42f5ff", "#f75cff"],
+      royal: ["#3b235d", "#b88932", "#ffe17a", "#fff0c1"],
+      dragon: ["#3b1010", "#e51e24", "#ffb52e", "#f0fbff"]
+    };
+    const pistolSkinNames = {
+      ember: "Ember Sidearm", frost: "Frostbite", neon: "Neon Strike",
+      royal: "Royal Gold", dragon: "Dragon Fang"
     };
     let customWeaponColor = "#4edfff", debugMenuOpen = false, debugFly = false;
     const weapons = {
@@ -545,6 +698,23 @@
     weaponPart(rifleModel, [.16, .3, .18], [.12, -.34, .02], "#27344a");
     weaponPart(rifleModel, [.18, .25, .25], [.12, -.33, -.35], "#485d75");
     weaponPart(rifleModel, [.22, .08, .15], [.12, .16, -.37], "#d6b85e");
+    const dragonfireCrest = new THREE.Group();
+    dragonfireCrest.visible = false;
+    const dragonfireParts = [
+      [[.12, .24, .2], [.12, .31, -.38], "#e51e24", "#ff2400"],
+      [[.28, .09, .18], [-.08, .27, -.4], "#e51e24", "#ff2400"],
+      [[.28, .09, .18], [.32, .27, -.4], "#e51e24", "#ff2400"],
+      [[.1, .16, .13], [.02, .4, -.4], "#ffb52e", null],
+      [[.1, .16, .13], [.22, .4, -.4], "#ffb52e", null],
+      [[.24, .045, .3], [.12, .2, -.5], "#f0fbff", "#d9faff"]
+    ];
+    dragonfireParts.forEach(([size, position, color, glow]) => {
+      const piece = weaponPart(dragonfireCrest, size, position, color, glow);
+      piece.userData.dragonfireDecoration = true;
+    });
+    dragonfireCrest.children[1].rotation.z = -.45;
+    dragonfireCrest.children[2].rotation.z = .45;
+    rifleModel.add(dragonfireCrest);
     const pistolModel = makeWeaponModel("pistol");
     weaponPart(pistolModel, [.23, .23, .43], [.15, -.08, -.28], "#43536b");
     weaponPart(pistolModel, [.15, .14, .55], [.15, -.03, -.69], "#8feaff", "#36d9ff");
@@ -575,6 +745,7 @@
     weaponPart(burstModel, [.24, .07, .48], [.12, .19, -.46], "#9cefe0", "#38f5ce");
     weaponCylinder(burstModel, .055, .16, [.12, -.04, -1.03], "#c3f6e9");
     const knifeModel = makeWeaponModel("knife");
+    knifeModel.rotation.x = Math.PI / 2;
     weaponPart(knifeModel, [.12, .14, .42], [.18, -.2, -.16], "#704b3b");
     weaponPart(knifeModel, [.3, .09, .1], [.18, -.1, -.42], "#e8cc7a");
     weaponPart(knifeModel, [.18, .12, .63], [.18, -.03, -.77], "#bff8ff", "#4edfff");
@@ -633,6 +804,7 @@
       const modelId = slot === 1 ? inventory.primary : slot === 2 ? "pistol" : slot === 3 ? "knife" : "bomb";
       for (const [id, model] of weaponModels) model.visible = id === modelId;
       applyPrimarySkin();
+      applyPistolSkin();
       updateUI();
     }
     setWeapon(1);
@@ -668,26 +840,40 @@
         button.classList.toggle("equipped", inventory.skin === id);
         button.textContent = `${skinNames[id]} · ${inventory.skin === id ? "EQUIPPED" : owned ? "OWNED · SELECT" : `$${skinPrices[id].toLocaleString("en-US")}`}`;
       });
+      document.querySelectorAll("[data-pistol-skin]").forEach(button => {
+        const id = button.dataset.pistolSkin, owned = inventory.pistolSkins.has(id);
+        button.classList.toggle("equipped", inventory.pistolSkin === id);
+        button.textContent = `${pistolSkinNames[id]} · ${inventory.pistolSkin === id ? "EQUIPPED" : owned ? "OWNED · SELECT" : `$${pistolSkinPrices[id].toLocaleString("en-US")}`}`;
+      });
       document.querySelectorAll(".slot").forEach(slot => slot.classList.toggle("active", Number(slot.dataset.slot) === inventory.selected));
     }
-    function applyPrimarySkin() {
-      const model = weaponModels.get(inventory.primary);
+    function applySkinToModel(model, skinId, palettes, customColor = null, skipDragonfireParts = false) {
       if (!model) return;
-      const palette = skinPalettes[inventory.skin] || skinPalettes.classic;
+      const palette = palettes[skinId] || palettes.classic;
+      dragonfireCrest.visible = inventory.primary === "rifle" && inventory.skin === "dragonfire";
       let index = 0;
       model.traverse(part => {
-        if (!part.isMesh || !part.material) return;
+        if (!part.isMesh || !part.material || (skipDragonfireParts && part.userData.dragonfireDecoration)) return;
         if (!part.userData.originalWeaponMaterial) part.userData.originalWeaponMaterial = part.material.clone();
         const original = part.userData.originalWeaponMaterial;
         const material = original.clone();
-        material.color.set(inventory.skin === "classic" ? (index % 3 === 1 ? customWeaponColor : original.color) : palette[index % palette.length]);
-        if (material.emissive && inventory.skin !== "classic") {
-          material.emissive.set(index % palette.length === 2 ? palette[1] : "#000000");
+        material.color.set(skinId === "classic"
+          ? (customColor && index % 3 === 1 ? customColor : original.color)
+          : palette[index % palette.length]);
+        if (material.emissive && skinId !== "classic") {
+          const glow = palette[2];
+          material.emissive.set(index % palette.length === 2 ? glow : "#000000");
           material.emissiveIntensity = index % palette.length === 2 ? 1.15 : 0;
         }
         part.material = material;
         index++;
       });
+    }
+    function applyPrimarySkin() {
+      applySkinToModel(weaponModels.get(inventory.primary), inventory.skin, skinPalettes, customWeaponColor, true);
+    }
+    function applyPistolSkin() {
+      applySkinToModel(weaponModels.get("pistol"), inventory.pistolSkin, pistolSkinPalettes);
     }
     function shopWeapon(id) {
       if (!inventory.owned.has(id)) {
@@ -709,19 +895,40 @@
       const button = event.target.closest("[data-buy]");
       if (button) shopWeapon(button.dataset.buy);
     });
-    document.querySelector("#skin-shop").addEventListener("click", event => {
-      const button = event.target.closest("[data-skin]");
+    document.querySelectorAll("#skin-shop, #ar-skin-shop").forEach(shop => {
+      shop.addEventListener("click", event => {
+        const button = event.target.closest("[data-skin]");
+        if (!button) return;
+        const id = button.dataset.skin;
+        if (!inventory.skins.has(id)) {
+          if (inventory.cash < skinPrices[id]) { say(`You need $${skinPrices[id].toLocaleString("en-US")} to buy this skin.`); return; }
+          inventory.cash -= skinPrices[id];
+          inventory.skins.add(id);
+        }
+        inventory.skin = id;
+        if ((id === "dragonfire" || id === "solar") && inventory.primary !== "rifle") {
+          inventory.primary = "rifle";
+          setWeapon(1);
+        }
+        applyPrimarySkin();
+        updateUI();
+        say(`Equipped ${skinNames[id]} skin.`);
+      });
+    });
+    document.querySelector("#pistol-skin-shop").addEventListener("click", event => {
+      const button = event.target.closest("[data-pistol-skin]");
       if (!button) return;
-      const id = button.dataset.skin;
-      if (!inventory.skins.has(id)) {
-        if (inventory.cash < skinPrices[id]) { say(`You need $${skinPrices[id].toLocaleString("en-US")} to buy this skin.`); return; }
-        inventory.cash -= skinPrices[id];
-        inventory.skins.add(id);
+      const id = button.dataset.pistolSkin;
+      if (!inventory.pistolSkins.has(id)) {
+        const price = pistolSkinPrices[id];
+        if (inventory.cash < price) { say(`You need $${price.toLocaleString("en-US")} to buy this pistol skin.`); return; }
+        inventory.cash -= price;
+        inventory.pistolSkins.add(id);
       }
-      inventory.skin = id;
-      applyPrimarySkin();
+      inventory.pistolSkin = id;
+      applyPistolSkin();
       updateUI();
-      say(`Equipped ${button.textContent.split(" · ")[0]} skin.`);
+      say(`Equipped ${pistolSkinNames[id]} pistol skin.`);
     });
     ui.username.addEventListener("input", updateUI);
     function say(text) {
@@ -972,6 +1179,7 @@
       inventory.cash = Infinity;
       inventory.owned = new Set(Object.keys(weapons));
       inventory.skins = new Set(Object.keys(skinPalettes));
+      inventory.pistolSkins = new Set(Object.keys(pistolSkinPalettes));
       updateUI();
       say("All weapons and skins unlocked for free!");
     }
