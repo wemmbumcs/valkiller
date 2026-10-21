@@ -9,14 +9,14 @@
     * { box-sizing: border-box; }
     body { margin: 0; min-height: 100vh; overflow: hidden; background: #101722; color: #f4f3e9; }
     #game { display: block; width: 100vw; height: 100vh; cursor: crosshair; }
-    .panel { position: fixed; z-index: 2; background: #111a24df; border: 1px solid #ffffff24; border-radius: 12px; box-shadow: 0 8px 28px #0005; backdrop-filter: blur(8px); }
+    .panel { position: fixed; z-index: 2; background: linear-gradient(145deg, #172433eF, #0d151feF); border: 1px solid #bfeeff27; border-radius: 12px; box-shadow: 0 10px 32px #0006, inset 0 1px #ffffff0b; backdrop-filter: blur(10px); }
     #brand { left: 18px; top: 16px; padding: 12px 16px; }
     h1 { margin: 0; color: #f4d77d; font-size: 18px; letter-spacing: .12em; text-transform: uppercase; }
     #brand small { display: block; margin-top: 3px; color: #a9b8c8; }
     #stats { right: 18px; top: 16px; min-width: 172px; padding: 12px 15px; line-height: 1.8; }
     body:not(.authenticated) #stats, body:not(.authenticated) #scoreboard,
     body:not(.authenticated) #hotbar, body:not(.authenticated) #help { display: none; }
-    #scoreboard { position: fixed; z-index: 3; top: 16px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 18px; padding: 9px 18px; white-space: nowrap; }
+    #scoreboard { position: fixed; z-index: 3; top: 16px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 18px; padding: 9px 18px; white-space: nowrap; animation: panel-drop .55s cubic-bezier(.2,.8,.2,1) both; }
     #scoreboard b { color: #f4d77d; font-size: 19px; }
     #scoreboard .team { color: #dce7f0; font-size: 12px; text-align: center; }
     #scoreboard .team em { display: block; color: #8de9ff; font-size: 10px; font-style: normal; letter-spacing: .1em; }
@@ -33,20 +33,33 @@
     .weapon-icon .gun-dark { fill: #263240; }
     .weapon-icon .gun-glow { fill: #8de9ff; }
     .slot.active .weapon-icon { filter: drop-shadow(0 0 5px #f4d77d99); }
-    .slot.active { border: 2px solid #f4d77d; background: #493e2c; box-shadow: 0 0 16px #ffd76c55; }
+    .slot.active { border: 2px solid #f4d77d; background: linear-gradient(145deg, #665331, #493e2c); box-shadow: 0 0 20px #ffd76c66, inset 0 0 12px #ffd76c22; animation: slot-pulse 2s ease-in-out infinite; }
     .slot span { position: absolute; left: 5px; top: 1px; color: #ccd5df; font-size: 10px; }
     .slot b { position: absolute; right: 5px; bottom: 2px; font-size: 11px; }
     #help { left: 18px; bottom: 18px; max-width: min(360px, calc(100vw - 36px)); padding: 10px 13px; color: #c7d1dc; font-size: 12px; line-height: 1.6; }
-    #toast { position: fixed; top: 94px; left: 50%; transform: translateX(-50%); padding: 9px 14px; color: #ffe9a3; opacity: 0; transition: opacity .2s; pointer-events: none; }
-    #crosshair { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); color: #fff; font-size: 20px; text-shadow: 0 1px 4px #000; pointer-events: none; opacity: .75; transition: color .12s, text-shadow .12s; }
-    body.aiming #crosshair { color: #8de9ff; text-shadow: 0 0 10px #55ddff; }
+    #toast { position: fixed; top: 94px; left: 50%; transform: translateX(-50%); padding: 9px 14px; color: #ffe9a3; opacity: 0; transition: opacity .2s, transform .2s; pointer-events: none; }
+    #toast:not([style*="opacity: 0"]) { transform: translate(-50%, 4px); }
+    #crosshair { position: fixed; left: 50%; top: 50%; width: 22px; height: 22px; transform: translate(-50%, -50%); pointer-events: none; opacity: .85; transition: width .12s, height .12s; filter: drop-shadow(0 1px 3px #000); }
+    #crosshair i { position: absolute; display: block; width: 2px; height: 6px; border-radius: 2px; background: #fff; transition: background .12s, transform .12s; }
+    #crosshair i:nth-child(1) { top: 0; left: 10px; }
+    #crosshair i:nth-child(2) { bottom: 0; left: 10px; }
+    #crosshair i:nth-child(3) { left: 0; top: 10px; width: 6px; height: 2px; }
+    #crosshair i:nth-child(4) { right: 0; top: 10px; width: 6px; height: 2px; }
+    #crosshair b { position: absolute; left: 9px; top: 9px; width: 4px; height: 4px; border-radius: 50%; background: #f4d77d; }
+    body.aiming #crosshair i { background: #8de9ff; }
+    body.shooting #crosshair { width: 30px; height: 30px; }
+    body.hit-confirm #crosshair i { background: #91e5a7; transform: scale(1.35); }
+    #hit-overlay { position: fixed; z-index: 4; inset: 0; pointer-events: none; opacity: 0; background: radial-gradient(ellipse, transparent 42%, #ff244955 100%); }
+    #hit-overlay.show { animation: hit-flash .42s ease-out; }
+    #hit-marker { position: fixed; z-index: 3; left: 50%; top: 50%; transform: translate(-50%, -50%) scale(.35) rotate(-45deg); color: #fff; font: 700 25px/1 system-ui; opacity: 0; pointer-events: none; text-shadow: 0 0 8px #ff485c; }
+    #hit-marker.show { animation: hit-pop .28s cubic-bezier(.15, .85, .3, 1.3); }
     #scope { display: none; position: fixed; z-index: 1; inset: 0; pointer-events: none; background: radial-gradient(circle, transparent 0 25vmin, #05080ddd 26vmin 100%); }
     #scope::before, #scope::after { content: ""; position: absolute; left: 50%; top: 50%; background: #d6faffbb; transform: translate(-50%, -50%); }
     #scope::before { width: 1px; height: 100vh; }
     #scope::after { width: 100vw; height: 1px; }
     body.sniper-aim #scope { display: block; }
     #overlay { position: fixed; inset: 0; z-index: 5; display: grid; place-items: center; background: #080d13b8; }
-    #card { width: min(460px, calc(100vw - 32px)); padding: 28px; text-align: center; }
+    #card { width: min(460px, calc(100vw - 32px)); padding: 28px; text-align: center; animation: card-rise .5s cubic-bezier(.2,.8,.2,1) both; }
     #card { max-height: 92vh; overflow-y: auto; }
     #card h2 { margin: 0 0 10px; color: #f4d77d; font-size: 30px; }
     #card p { color: #c7d1dc; line-height: 1.6; }
@@ -86,8 +99,17 @@
     [hidden] { display: none !important; }
     #player-name { color: #8de9ff; }
     body.locked { cursor: none; }
-    button { padding: 11px 22px; border: 0; border-radius: 8px; color: #17202a; background: #f4d77d; font: inherit; font-weight: 800; cursor: pointer; }
-    button:hover { background: #ffe8a0; }
+    button { padding: 11px 22px; border: 0; border-radius: 8px; color: #17202a; background: linear-gradient(135deg, #ffe7a0, #f4d77d); font: inherit; font-weight: 800; cursor: pointer; transition: transform .15s, box-shadow .15s, filter .15s; }
+    button:hover { background: linear-gradient(135deg, #fff0bc, #ffe8a0); transform: translateY(-1px); box-shadow: 0 5px 16px #f4d77d33; }
+    button:active { transform: translateY(1px) scale(.98); }
+    @keyframes card-rise { from { opacity: 0; transform: translateY(16px) scale(.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+    @keyframes panel-drop { from { opacity: 0; translate: 0 -10px; } to { opacity: 1; translate: 0 0; } }
+    @keyframes slot-pulse { 50% { box-shadow: 0 0 24px #ffd76c77, inset 0 0 14px #ffd76c33; } }
+    @keyframes hit-flash { 0% { opacity: .85; } 100% { opacity: 0; } }
+    @keyframes hit-pop { 0% { opacity: 0; transform: translate(-50%, -50%) scale(.35) rotate(-45deg); } 40% { opacity: 1; transform: translate(-50%, -50%) scale(1.25) rotate(0); } 100% { opacity: 0; transform: translate(-50%, -50%) scale(.9) rotate(0); } }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; }
+    }
     @media (max-width: 600px) {
       #brand { left: 10px; top: 10px; padding: 9px 11px; }
       #stats { right: 10px; top: 10px; min-width: 130px; padding: 8px 10px; font-size: 12px; }
@@ -123,8 +145,10 @@
   </div>
   <div id="help" class="panel"><b>WASD</b> Move · <b>Shift</b> Crouch · <b>Ctrl</b> Slide · <b>Space</b> Jump · <b>R</b> Reload · <b>Hold Left Click</b> or <b>V/X</b> Shoot · <b>Right Click</b> Aim sniper · <b>1–4</b> Switch weapons · <b>F3</b> Debug</div>
   <div id="toast" class="panel"></div>
+  <div id="hit-overlay"></div>
+  <div id="hit-marker" aria-hidden="true">×</div>
   <div id="scope"></div>
-  <div id="crosshair">+</div>
+  <div id="crosshair" aria-hidden="true"><i></i><i></i><i></i><i></i><b></b></div>
   <div id="overlay">
     <div id="card" class="panel">
       <form id="login-panel">
@@ -178,6 +202,7 @@
           <button data-skin="void">Void Reaper · $750</button>
           <button data-skin="toxic">Toxic Circuit · $750</button>
           <button data-skin="glass">Glass · $2,500</button>
+          <button data-skin="halloween">Halloween · $1,500</button>
         </div>
         <div class="eyebrow">ASSAULT RIFLE EXCLUSIVE</div>
         <div id="ar-skin-shop" class="shop-grid">
@@ -192,6 +217,7 @@
           <button data-pistol-skin="royal">Royal Gold · $750</button>
           <button data-pistol-skin="dragon">Dragon Fang · $1,000</button>
           <button data-pistol-skin="glass">Glass · $2,500</button>
+          <button data-pistol-skin="halloween">Halloween · $1,500</button>
         </div>
         <label for="custom-weapon-skin" class="eyebrow">CUSTOM WEAPON COLOR</label>
         <input id="custom-weapon-skin" type="color" value="#4edfff" aria-label="Choose weapon skin color">
@@ -404,7 +430,7 @@
     const shopPrices = { rifle: 0, pistol: 0, sniper: 1500, shotgun: 1000, burst: 2000 };
     const skinPrices = {
       aurora: 500, inferno: 500, emerald: 500, ruby: 500, sapphire: 500,
-      dragonfire: 1500, neon: 750, arctic: 750, void: 750, solar: 5000, toxic: 750, glass: 2500
+      dragonfire: 1500, neon: 750, arctic: 750, void: 750, solar: 5000, toxic: 750, glass: 2500, halloween: 1500
     };
     const skinPalettes = {
       classic: ["#303b53", "#a7d9dd", "#f0d57b"],
@@ -419,15 +445,16 @@
       void: ["#171522", "#49344f", "#d14dff", "#8e7bff"],
       solar: ["#57320d", "#f28c28", "#ffe77a", "#fff5cf"],
       toxic: ["#183c2a", "#50ba55", "#caff4d", "#72f5c5"],
-      glass: ["#d6fbff", "#8be8ff", "#f4ffff", "#66bddb"]
+      glass: ["#d6fbff", "#8be8ff", "#f4ffff", "#66bddb"],
+      halloween: ["#30134d", "#ff7417", "#a8f04b", "#ffe6a1"]
     };
     const skinNames = {
       aurora: "Aurora", inferno: "Inferno", emerald: "Emerald",
       ruby: "Blood Moon", sapphire: "Sapphire", dragonfire: "Dragon Crest AR",
       neon: "Neon Pulse", arctic: "Arctic Phantom", void: "Void Reaper",
-      solar: "Solar Crown", toxic: "Toxic Circuit", glass: "Glass"
+      solar: "Solar Crown", toxic: "Toxic Circuit", glass: "Glass", halloween: "Haunted Night"
     };
-    const pistolSkinPrices = { ember: 500, frost: 500, neon: 750, royal: 750, dragon: 1000, glass: 2500 };
+    const pistolSkinPrices = { ember: 500, frost: 500, neon: 750, royal: 750, dragon: 1000, glass: 2500, halloween: 1500 };
     const pistolSkinPalettes = {
       classic: ["#43536b", "#8feaff", "#dfc76d"],
       ember: ["#54231b", "#e45b2a", "#ffca58", "#f5e4cc"],
@@ -435,11 +462,12 @@
       neon: ["#25105a", "#a232ff", "#42f5ff", "#f75cff"],
       royal: ["#3b235d", "#b88932", "#ffe17a", "#fff0c1"],
       dragon: ["#3b1010", "#e51e24", "#ffb52e", "#f0fbff"],
-      glass: ["#d6fbff", "#8be8ff", "#f4ffff", "#66bddb"]
+      glass: ["#d6fbff", "#8be8ff", "#f4ffff", "#66bddb"],
+      halloween: ["#30134d", "#ff7417", "#a8f04b", "#ffe6a1"]
     };
     const pistolSkinNames = {
       ember: "Ember Sidearm", frost: "Frostbite", neon: "Neon Strike",
-      royal: "Royal Gold", dragon: "Dragon Fang", glass: "Glass"
+      royal: "Royal Gold", dragon: "Dragon Fang", glass: "Glass", halloween: "Haunted Night"
     };
     let customWeaponColor = "#4edfff", debugMenuOpen = false, debugFly = false;
     const weapons = {
@@ -566,6 +594,18 @@
           trunk: ["#493a34", "#654c3d", "#3e322f", "#795b45"],
           leaves: ["#7c7756", "#9b925f", "#646b50", "#b4a36e"]
         }
+      },
+      halloween: {
+        name: "Haunted Hollow", sky: "#8b6aa8", nightSky: "#130d24",
+        skyTop: "#392550", skyHorizon: "#d49b72", nightTop: "#090712",
+        clearRadius: 135, stoneAbove: .89, waterBelow: .045, treeAbove: .78,
+        terrain: {
+          grass: ["#3c593c", "#526345", "#344a37", "#69734b"],
+          water: ["#44325f", "#5c3b78", "#302746", "#764b6f"],
+          stone: ["#5d5364", "#746477", "#4c485b", "#8a7181"],
+          trunk: ["#3c2a2b", "#53383a", "#30242a", "#69443c"],
+          leaves: ["#3c5438", "#52683c", "#293d34", "#687343"]
+        }
       }
     };
     let selectedMap = "grid";
@@ -664,6 +704,48 @@
           for (let z = -HALF; z < HALF; z++) makeCell(x, z);
         }
       }
+      if (mapId === "halloween") buildHalloweenDecor();
+    }
+    function addHalloweenPumpkin(x, z, scale = 1) {
+      const pumpkin = addCube(x, .42 * scale, z, "#f07818", .78 * scale);
+      pumpkin.scale.set(.9 * scale, .72 * scale, .78 * scale);
+      pumpkin.material.color.set("#f07818");
+      pumpkin.material.emissive.set("#d94d08");
+      pumpkin.material.emissiveIntensity = .18;
+      mapDecor.push(pumpkin);
+      const stem = addCube(x, .88 * scale, z, "#56713a", .16 * scale);
+      stem.scale.set(.18 * scale, .2 * scale, .18 * scale);
+      mapDecor.push(stem);
+      for (const eyeX of [-.19, .19]) {
+        const eye = addCube(x + eyeX * scale, .48 * scale, z - .4 * scale, "#ffe35a", .1 * scale);
+        eye.material.emissive.set("#ff9d00");
+        eye.material.emissiveIntensity = 1.8;
+        mapDecor.push(eye);
+      }
+      const mouth = addCube(x, .2 * scale, z - .405 * scale, "#35152b", .2 * scale);
+      mouth.scale.set(.3 * scale, .09 * scale, .035 * scale);
+      mapDecor.push(mouth);
+    }
+    function buildHalloweenDecor() {
+      for (const [x, z, scale] of [
+        [-13, -12, 1.25], [13, -13, 1.1], [-15, 8, 1.15],
+        [15, 9, 1.3], [-7, 15, .9], [8, 15, 1.1], [0, -17, 1]
+      ]) addHalloweenPumpkin(x, z, scale);
+      for (const [x, z] of [[-10, -5], [10, -4], [-12, 3], [12, 5], [-7, 11], [7, 12]]) {
+        const grave = addCube(x, .55, z, "#666070", .85);
+        grave.scale.set(.68, 1.1, .22);
+        mapDecor.push(grave);
+        const crossbar = addCube(x, .82, z - .02, "#85808c", .55);
+        crossbar.scale.set(.72, .13, .25);
+        mapDecor.push(crossbar);
+      }
+      const moon = new THREE.Mesh(
+        new THREE.SphereGeometry(2.2, 16, 12),
+        new THREE.MeshBasicMaterial({ color: "#f7c979" })
+      );
+      moon.position.set(12, 17, -28);
+      scene.add(moon);
+      mapDecor.push(moon);
     }
     function addArenaBlock(x, y, z, width, height, depth) {
       const geometry = new THREE.BoxGeometry(width, height, depth);
@@ -1061,6 +1143,16 @@
     function say(text) {
       ui.toast.textContent = text; ui.toast.style.opacity = 1; toastTimer = 2;
     }
+    function pulseEffect(element, className, duration) {
+      element.classList.remove(className);
+      void element.offsetWidth;
+      element.classList.add(className);
+      setTimeout(() => element.classList.remove(className), duration);
+    }
+    function showHitMarker() {
+      pulseEffect(document.querySelector("#hit-marker"), "show", 300);
+      pulseEffect(document.body, "hit-confirm", 160);
+    }
     function makeMob(x, z) {
       const group = new THREE.Group();
       group.position.set(x, 0, z);
@@ -1096,7 +1188,7 @@
       receiver.position.z = -.18; barrel.position.set(0, .03, -.66); stock.position.z = .19; stock.scale.set(.15, .15, .25);
       gun.add(receiver, barrel, stock); gun.position.set(.25, .79, -.18); group.add(gun);
       scene.add(group);
-      const mob = { group, body, armL, armR, legs, gunMat, x, z, vx: 0, vz: 0, hp: 3, flash: 0, hitTimer: 0, shootTimer: 1.2 + Math.random() * 1.2, phase: Math.random() * Math.PI * 2 };
+      const mob = { group, body, armL, armR, legs, gunMat, gun, x, z, vx: 0, vz: 0, hp: 3, flash: 0, hitTimer: 0, shootTimer: 1.2 + Math.random() * 1.2, phase: Math.random() * Math.PI * 2, shotKick: 0 };
       group.userData.mob = mob; mobs.push(mob);
     }
     function startRound() {
@@ -1202,6 +1294,7 @@
       player.ammo[id]--;
       player.fireCooldown = definition.cooldown;
       recoil = id === "sniper" ? .28 : id === "shotgun" ? .2 : .14;
+      pulseEffect(document.body, "shooting", 120);
       muzzleTimer = .075;
       muzzle.intensity = 5;
       muzzleFlash.visible = true;
@@ -1224,6 +1317,7 @@
           const mob = root?.userData.mob;
           if (mob && !hitTargets.has(mob)) {
             hitTargets.add(mob);
+            showHitMarker();
             const headshot = mobHit.object.userData.hitZone === "head";
             const damage = headshot ? (id === "sniper" ? mob.hp : definition.damage * 2) : definition.damage;
             damageMob(mob, damage);
@@ -1552,12 +1646,18 @@
         const bob = Math.sin(elapsed * (movingMob ? 8 : 3) + mob.phase) * (movingMob ? .075 : .025);
         mob.group.position.set(mob.x, bob, mob.z);
         if (distance > .01) mob.group.rotation.y = Math.atan2(-vx, -vz);
+        mob.group.rotation.z = THREE.MathUtils.clamp(-mob.vx * .035, -.12, .12);
         mob.body.position.y = .58 + (mob.flash > 0 ? .06 : 0);
         mob.body.material.color.set(mob.flash > 0 ? "#ffffff" : "#e32636");
         mob.armL.rotation.x = Math.sin(elapsed * 8 + mob.phase) * (movingMob ? .32 : .08);
         mob.armR.rotation.x = -Math.sin(elapsed * 8 + mob.phase) * (movingMob ? .32 : .08);
+        mob.legs[0].rotation.x = movingMob ? Math.sin(elapsed * 8 + mob.phase) * .42 : 0;
+        mob.legs[1].rotation.x = movingMob ? -Math.sin(elapsed * 8 + mob.phase) * .42 : 0;
+        mob.shotKick = Math.max(0, mob.shotKick - dt * 2.8);
+        mob.gun.position.z = -.18 + mob.shotKick * 1.3;
         if (distance < 8 && mob.shootTimer <= 0 && player.invuln <= 0) {
           mob.shootTimer = 1.8 + Math.random() * 1.2;
+          mob.shotKick = .12;
           const origin = mob.group.localToWorld(new THREE.Vector3(.25, .79, -.86));
           const target = new THREE.Vector3(player.x, (keys.has("shift") ? 1.12 : 1.62) + player.y - .2, player.z);
           const shotDirection = target.clone().sub(origin);
@@ -1576,7 +1676,7 @@
           mob.flash = .12;
           burstParticles(origin.x, origin.z, "#ff9b58", 3);
           if (hitsPlayer) {
-            player.hp--; player.invuln = 1.4; mob.hitTimer = 1.2; hitShake = 1; say("The Gloomling hit you!");
+            player.hp--; player.invuln = 1.4; mob.hitTimer = 1.2; hitShake = 1; pulseEffect(document.querySelector("#hit-overlay"), "show", 450); say("The Gloomling hit you!");
             burstParticles(player.x, player.z, "#ff758d", 5);
           } else if (obstruction) {
             burstParticles(impact.x, impact.z, "#ffb16e", 3);
