@@ -39,6 +39,18 @@
     .slot span { position: absolute; left: 5px; top: 1px; color: #ccd5df; font-size: 10px; }
     .slot b { position: absolute; right: 5px; bottom: 2px; font-size: 11px; }
     #help { left: 18px; bottom: 18px; max-width: min(360px, calc(100vw - 36px)); padding: 10px 13px; color: #c7d1dc; font-size: 12px; line-height: 1.6; }
+    #chat { position: fixed; z-index: 4; right: 18px; bottom: 92px; width: min(320px, calc(100vw - 36px)); padding: 10px; }
+    #chat-toggle { width: 100%; padding: 8px 10px; }
+    #chat-window { display: none; }
+    #chat.open #chat-window { display: block; }
+    #chat-status { margin: 8px 2px; color: #aebdcc; font-size: 11px; }
+    #chat-messages { display: flex; flex-direction: column; gap: 5px; height: 170px; overflow-y: auto; padding: 8px; border: 1px solid #ffffff20; border-radius: 7px; background: #0b141dcc; font-size: 12px; line-height: 1.4; overflow-wrap: anywhere; }
+    #chat-messages .chat-name { color: #8de9ff; font-weight: 700; }
+    #chat-form { display: flex; gap: 6px; margin-top: 7px; }
+    #chat-input { min-width: 0; flex: 1; padding: 8px; border: 1px solid #ffffff30; border-radius: 6px; outline: none; color: #f4f3e9; background: #17232f; font: inherit; }
+    #chat-input:focus { border-color: #8de9ff; }
+    #chat-form button { padding: 8px 10px; }
+    body:not(.authenticated) #chat { display: none; }
     #toast { position: fixed; top: 94px; left: 50%; transform: translateX(-50%); padding: 9px 14px; color: #ffe9a3; opacity: 0; transition: opacity .2s, transform .2s; pointer-events: none; }
     #toast:not([style*="opacity: 0"]) { transform: translate(-50%, 4px); }
     #crosshair { position: fixed; left: 50%; top: 50%; width: 22px; height: 22px; transform: translate(-50%, -50%); pointer-events: none; opacity: .85; transition: width .12s, height .12s; filter: drop-shadow(0 1px 3px #000); }
@@ -77,14 +89,18 @@
     #map-picker { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; margin-top: 10px; }
     #map-picker button { padding: 8px 6px; color: #eaf4fa; background: #26394a; border: 1px solid #ffffff24; font-size: 11px; }
     #map-picker button.active { color: #17202a; background: #8de9ff; }
+    #mode-picker { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; margin-top: 10px; }
+    #mode-picker button { padding: 8px 6px; color: #eaf4fa; background: #26394a; border: 1px solid #ffffff24; font-size: 12px; }
+    #mode-picker button.active { color: #17202a; background: #8de9ff; }
     #selected-map-name { margin: 8px 0 0; color: #f4d77d; font-size: 12px; font-weight: 700; }
     #shop-balance { margin: 10px 0 0; color: #f4d77d; font-size: 13px; font-weight: 700; }
     #character-skin-shop button { display: flex; align-items: center; justify-content: center; gap: 7px; }
     .skin-preview { width: 14px; height: 14px; border: 1px solid #ffffff99; border-radius: 3px; }
     .skin-preview.red { background: #ef304f; }
     .skin-preview.blue { background: #287dff; }
-    #custom-player-skin { width: 40px; height: 30px; padding: 2px; border: 1px solid #ffffff50; border-radius: 5px; background: #26394a; cursor: pointer; }
-    #custom-weapon-skin { width: 40px; height: 30px; padding: 2px; border: 1px solid #ffffff50; border-radius: 5px; background: #26394a; cursor: pointer; }
+    .color-palette { display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 4px; width: min(100%, 300px); margin: 6px 0 14px; }
+    .color-palette button { aspect-ratio: 1; min-width: 0; padding: 0; border: 1px solid #ffffff70; border-radius: 4px; }
+    .color-palette button.selected { outline: 2px solid #fff; outline-offset: 1px; }
     #debug-menu { display: none; position: fixed; z-index: 10; top: 50%; left: 50%; width: min(420px, calc(100vw - 28px)); max-height: 85vh; overflow: auto; transform: translate(-50%, -50%); padding: 20px; }
     #debug-menu.open { display: block; }
     #debug-menu h2 { margin: 0 0 8px; color: #8de9ff; }
@@ -119,6 +135,7 @@
       #scoreboard { top: 100px; gap: 11px; padding: 7px 12px; }
       .slot { width: 49px; height: 48px; }
       #help { bottom: 80px; left: 10px; font-size: 11px; }
+      #chat { right: 10px; bottom: 80px; }
     }
   </style>
 </head>
@@ -149,6 +166,17 @@
     <div class="slot" data-slot="4" title="Bomb"><span>4</span>💣<b id="bomb-count">3</b></div>
   </div>
   <div id="help" class="panel"><b>WASD</b> Move · <b>Shift</b> Crouch · <b>Ctrl</b> Slide · <b>Space</b> Jump · <b>R</b> Reload · <b>Hold Left Click</b> or <b>V/X</b> Shoot · <b>Hold Right Click</b> Aim (all guns) · <b>1–4</b> Switch weapons · <b>F3</b> Debug</div>
+  <section id="chat" class="panel" aria-label="LAN chat">
+    <button id="chat-toggle" type="button" aria-expanded="false" aria-controls="chat-window">CHAT · T</button>
+    <div id="chat-window">
+      <div id="chat-status" role="status">Connecting to LAN chat…</div>
+      <div id="chat-messages" aria-live="polite" aria-label="Chat messages"></div>
+      <form id="chat-form">
+        <input id="chat-input" type="text" maxlength="200" autocomplete="off" placeholder="Type a message…" aria-label="Chat message">
+        <button type="submit">SEND</button>
+      </form>
+    </div>
+  </section>
   <div id="toast" class="panel"></div>
   <div id="hit-overlay"></div>
   <div id="hit-marker" aria-hidden="true">×</div>
@@ -184,7 +212,12 @@
         <h2 id="overlay-title">VALKILLER</h2>
         <p id="overlay-copy">Choose your weapon in the lobby, then survive each round in the voxel arena.</p>
         <div id="map-vote">
-          <div class="eyebrow">CHOOSE YOUR MAP</div>
+          <div class="eyebrow">CHOOSE GAME MODE</div>
+          <div id="mode-picker" role="group" aria-label="Choose game mode">
+            <button type="button" data-mode="1v1" class="active" aria-pressed="true">1v1 · 1 enemy bot</button>
+            <button type="button" data-mode="2v2" aria-pressed="false">2v2 · 2 enemies + ally</button>
+          </div>
+          <div class="eyebrow" style="margin-top: 12px">CHOOSE YOUR MAP</div>
           <div id="selected-map-name" aria-live="polite">Selected: Block Arena</div>
           <div id="map-picker"></div>
         </div>
@@ -210,10 +243,19 @@
           <button data-skin="glass">Glass · $2,500</button>
           <button data-skin="halloween">Halloween · $1,500</button>
         </div>
+        <div class="eyebrow">FULL WEAPON SET</div>
+        <div id="weapon-set-shop" class="shop-grid">
+          <button type="button" data-set-skin="shadowCircuit">Shadow Circuit · $2,000</button>
+        </div>
         <div class="eyebrow">ASSAULT RIFLE EXCLUSIVE</div>
         <div id="ar-skin-shop" class="shop-grid">
           <button data-skin="dragonfire">Dragon Crest AR · $1,500</button>
           <button data-skin="solar">Solar Crown · $5,000</button>
+          <button data-skin="forest">AUG · $1,500</button>
+        </div>
+        <div class="eyebrow">SNIPER EXCLUSIVE</div>
+        <div id="sniper-skin-shop" class="shop-grid">
+          <button data-sniper-skin="gold">Golden Sniper · $1,500</button>
         </div>
         <div class="eyebrow">PISTOL SKINS</div>
         <div id="pistol-skin-shop" class="shop-grid">
@@ -225,15 +267,15 @@
           <button data-pistol-skin="glass">Glass · $2,500</button>
           <button data-pistol-skin="halloween">Halloween · $1,500</button>
         </div>
-        <label for="custom-weapon-skin" class="eyebrow">CUSTOM WEAPON COLOR</label>
-        <input id="custom-weapon-skin" type="color" value="#4edfff" aria-label="Choose weapon skin color">
+        <div class="eyebrow">WEAPON COLOR · 100 COLORS</div>
+        <div id="custom-weapon-palette" class="color-palette" role="group" aria-label="Choose weapon skin color"></div>
         <div class="eyebrow">CHARACTER SKINS</div>
         <div id="character-skin-shop" class="shop-grid">
           <button type="button" data-player-skin="red"><span class="skin-preview red"></span>FULL RED</button>
           <button type="button" data-player-skin="blue"><span class="skin-preview blue"></span>FULL BLUE</button>
         </div>
-        <label for="custom-player-skin" class="eyebrow">CUSTOM CHARACTER COLOR (OVER 16 MILLION COLORS)</label>
-        <input id="custom-player-skin" type="color" value="#287dff" aria-label="Choose character skin color">
+        <div class="eyebrow">CHARACTER COLOR · 100 COLORS</div>
+        <div id="custom-player-palette" class="color-palette" role="group" aria-label="Choose character skin color"></div>
         <input id="username" type="text" maxlength="32" autocomplete="off" aria-label="Logged-in username" readonly>
         <button id="start" type="button">START GAME</button>
         <p class="menu-hint">W move forward · S move backward · A move left · D move right · Shift crouch · Ctrl slide · Space jump · R reload<br>Hold left click or hold V/X to fire · Right click aim with sniper · 1–4 switch weapons</p>
@@ -282,6 +324,10 @@
       ["Niko064255", "Hoanggiahuy2014@"]
     ]);
     const accountLevels = new Map([["WemmbuMCs", 10000]]);
+    let chatSocket = null;
+    let chatReady = false;
+    let chatCanRetry = true;
+    let chatReconnectTimer = null;
 
     function loadAccounts() {
       try {
@@ -387,6 +433,107 @@
       document.querySelector("#lobby-content").hidden = false;
       error.textContent = "";
       updateUI();
+      connectLanChat();
+    });
+    const chat = document.querySelector("#chat");
+    const chatToggle = document.querySelector("#chat-toggle");
+    const chatInput = document.querySelector("#chat-input");
+    const chatStatus = document.querySelector("#chat-status");
+    const chatMessages = document.querySelector("#chat-messages");
+    function setChatStatus(message) {
+      chatStatus.textContent = message;
+    }
+    function appendChatMessage(name, text) {
+      const line = document.createElement("div");
+      const sender = document.createElement("span");
+      sender.className = "chat-name";
+      sender.textContent = `${name}: `;
+      const body = document.createElement("span");
+      body.textContent = text;
+      line.append(sender, body);
+      chatMessages.append(line);
+      while (chatMessages.children.length > 60) chatMessages.firstElementChild.remove();
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+    function connectLanChat() {
+      if (!authenticated || !chatCanRetry) return;
+      if (!["http:", "https:"].includes(location.protocol) || !location.host) {
+        chatCanRetry = false;
+        setChatStatus("Open the game from the LAN server to use chat.");
+        return;
+      }
+      if (chatReconnectTimer) clearTimeout(chatReconnectTimer);
+      chatReconnectTimer = null;
+      setChatStatus("Connecting to LAN chat…");
+      const socket = new WebSocket(`${location.protocol === "https:" ? "wss:" : "ws:"}//${location.host}`);
+      chatSocket = socket;
+      socket.addEventListener("open", () => {
+        socket.send(JSON.stringify({ type: "join", name: ui.username.value.trim() }));
+      });
+      socket.addEventListener("message", event => {
+        let message;
+        try {
+          message = JSON.parse(event.data);
+        } catch (error) {
+          console.error("Invalid message received from LAN chat server:", error);
+          setChatStatus("Received an invalid message from the LAN server.");
+          return;
+        }
+        if (message.type === "welcome") {
+          chatReady = true;
+          setChatStatus("Connected · messages are shared with LAN players.");
+        } else if (message.type === "chat") {
+          appendChatMessage(message.name, message.text);
+        } else if (message.type === "chat-error" || message.type === "server-error") {
+          setChatStatus(message.message);
+          if (message.type === "server-error") chatCanRetry = false;
+        }
+      });
+      socket.addEventListener("close", () => {
+        if (chatSocket !== socket) return;
+        chatReady = false;
+        chatSocket = null;
+        if (!chatCanRetry) return;
+        setChatStatus("Disconnected · reconnecting…");
+        chatReconnectTimer = setTimeout(connectLanChat, 3000);
+      });
+      socket.addEventListener("error", error => {
+        console.error("LAN chat connection failed:", error);
+      });
+    }
+    chatToggle.addEventListener("click", () => {
+      const open = !chat.classList.contains("open");
+      chat.classList.toggle("open", open);
+      chatToggle.setAttribute("aria-expanded", String(open));
+      if (open) chatInput.focus();
+      else if (running) canvas.requestPointerLock?.();
+    });
+    document.querySelector("#chat-form").addEventListener("submit", event => {
+      event.preventDefault();
+      const text = chatInput.value.trim();
+      if (!text) return;
+      if (!chatReady || chatSocket?.readyState !== WebSocket.OPEN) {
+        setChatStatus("Not connected to LAN chat. Please wait for reconnect.");
+        return;
+      }
+      chatSocket.send(JSON.stringify({ type: "chat", text }));
+      chatInput.value = "";
+      setChatStatus("Connected · messages are shared with LAN players.");
+    });
+    document.addEventListener("keydown", event => {
+      if (!authenticated) return;
+      if (event.key === "Escape" && chat.classList.contains("open")) {
+        chat.classList.remove("open");
+        chatToggle.setAttribute("aria-expanded", "false");
+        if (running) canvas.requestPointerLock?.();
+        return;
+      }
+      if (event.target instanceof HTMLInputElement) return;
+      if (event.key.toLowerCase() === "t") {
+        chat.classList.add("open");
+        chatToggle.setAttribute("aria-expanded", "true");
+        chatInput.focus();
+      }
     });
     const scene = new THREE.Scene();
     scene.background = new THREE.Color("#8fc8db");
@@ -432,14 +579,16 @@
     const inventory = {
       wood: 0, stone: 0, cash: Infinity, selected: 1, primary: "rifle",
       owned: new Set(["rifle", "pistol"]), skins: new Set(["classic"]), skin: "classic",
-      pistolSkins: new Set(["classic"]), pistolSkin: "classic"
+      pistolSkins: new Set(["classic"]), pistolSkin: "classic",
+      sniperSkins: new Set(["classic"]), sniperSkin: "classic",
+      weaponSets: new Set()
     };
     const characterSkinColors = { red: "#ef304f", blue: "#287dff" };
     let playerSkinColor = characterSkinColors.blue;
     const shopPrices = { rifle: 0, pistol: 0, sniper: 1500, shotgun: 1000, burst: 2000 };
     const skinPrices = {
       aurora: 500, inferno: 500, emerald: 500, ruby: 500, sapphire: 500,
-      dragonfire: 1500, neon: 750, arctic: 750, void: 750, solar: 5000, toxic: 750, glass: 2500, halloween: 1500
+      dragonfire: 1500, neon: 750, arctic: 750, void: 750, solar: 5000, forest: 1500, shadowCircuit: 2000, toxic: 750, glass: 2500, halloween: 1500
     };
     const skinPalettes = {
       classic: ["#303b53", "#a7d9dd", "#f0d57b"],
@@ -453,6 +602,8 @@
       arctic: ["#253b52", "#77c9ed", "#e6fbff", "#8b9cff"],
       void: ["#171522", "#49344f", "#d14dff", "#8e7bff"],
       solar: ["#57320d", "#f28c28", "#ffe77a", "#fff5cf"],
+      shadowCircuit: ["#182625", "#265e50", "#36c9a0", "#101718", "#202d2d"],
+      forest: ["#3d6b35", "#527f43", "#456f39", "#111512", "#171b19", "#202522", "#151917", "#101412", "#181d19", "#31582d", "#47753c", "#3c6334", "#181d19"],
       toxic: ["#183c2a", "#50ba55", "#caff4d", "#72f5c5"],
       glass: ["#d6fbff", "#8be8ff", "#f4ffff", "#66bddb"],
       halloween: ["#30134d", "#ff7417", "#a8f04b", "#ffe6a1"]
@@ -461,8 +612,15 @@
       aurora: "Aurora", inferno: "Inferno", emerald: "Emerald",
       ruby: "Blood Moon", sapphire: "Sapphire", dragonfire: "Dragon Crest AR",
       neon: "Neon Pulse", arctic: "Arctic Phantom", void: "Void Reaper",
-      solar: "Solar Crown", toxic: "Toxic Circuit", glass: "Glass", halloween: "Haunted Night"
+      solar: "Solar Crown", forest: "AUG", shadowCircuit: "Shadow Circuit", toxic: "Toxic Circuit", glass: "Glass", halloween: "Haunted Night"
     };
+    const sniperSkinPrices = { gold: 1500 };
+    const sniperSkinPalettes = {
+      classic: ["#29394e", "#91f0ff", "#b7d5dc", "#1c293a", "#c0e5f2", "#35445c", "#ebd179"],
+      gold: ["#ffd900", "#ffea00", "#e8b900", "#b88700", "#d9a800", "#e5b600", "#bd8b00"],
+      shadowCircuit: ["#182625", "#265e50", "#36c9a0", "#101718", "#202d2d"]
+    };
+    const sniperSkinNames = { gold: "Golden Sniper", shadowCircuit: "Shadow Circuit" };
     const pistolSkinPrices = { ember: 500, frost: 500, neon: 750, royal: 750, dragon: 1000, glass: 2500, halloween: 1500 };
     const pistolSkinPalettes = {
       classic: ["#43536b", "#8feaff", "#dfc76d"],
@@ -471,14 +629,16 @@
       neon: ["#25105a", "#a232ff", "#42f5ff", "#f75cff"],
       royal: ["#3b235d", "#b88932", "#ffe17a", "#fff0c1"],
       dragon: ["#3b1010", "#e51e24", "#ffb52e", "#f0fbff"],
+      shadowCircuit: ["#182625", "#265e50", "#36c9a0", "#101718", "#202d2d"],
       glass: ["#d6fbff", "#8be8ff", "#f4ffff", "#66bddb"],
       halloween: ["#30134d", "#ff7417", "#a8f04b", "#ffe6a1"]
     };
     const pistolSkinNames = {
       ember: "Ember Sidearm", frost: "Frostbite", neon: "Neon Strike",
-      royal: "Royal Gold", dragon: "Dragon Fang", glass: "Glass", halloween: "Haunted Night"
+      royal: "Royal Gold", dragon: "Dragon Fang", shadowCircuit: "Shadow Circuit",
+      glass: "Glass", halloween: "Haunted Night"
     };
-    let customWeaponColor = "#4edfff", debugMenuOpen = false, debugFly = false;
+    let customWeaponColor = "#4edfff", weaponColorCustomized = false, debugMenuOpen = false, debugFly = false;
     const weapons = {
       rifle: { name: "Starfall AR", mag: 30, damage: 1, cooldown: .12, reload: 1.35, spread: .009 },
       pistol: { name: "Handgun", mag: 12, damage: 1, cooldown: .3, reload: 1, spread: .004 },
@@ -489,6 +649,18 @@
     let running = false, aiming = false, knifeSwing = 0, reloadAnim = 0, weaponSwap = 0, elapsed = 0, spawnTimer = 0, toastTimer = 0, lastTime = 0, muzzleTimer = 0, walkingTime = 0, wasPointerLocked = false;
     let uiUpdateTimer = 0;
     let roundNumber = 1, roundWins = 0, botWins = 0, roundDelay = 0, roundStarting = false;
+    let matchMode = "1v1";
+    document.querySelector("#mode-picker").addEventListener("click", event => {
+      const button = event.target.closest("[data-mode]");
+      if (!button || running) return;
+      matchMode = button.dataset.mode;
+      document.querySelectorAll("#mode-picker [data-mode]").forEach(option => {
+        const selected = option === button;
+        option.classList.toggle("active", selected);
+        option.setAttribute("aria-pressed", String(selected));
+      });
+      updateUI();
+    });
     const box = new THREE.BoxGeometry(1, 1, 1);
     const mat = color => new THREE.MeshStandardMaterial({ color, roughness: .9, flatShading: true });
     const mats = {
@@ -999,6 +1171,7 @@
     weaponCylinder(sniperModel, .06, .18, [.12, -.06, -1.52], "#c0e5f2");
     weaponPart(sniperModel, [.17, .3, .24], [.12, -.33, .12], "#35445c");
     weaponPart(sniperModel, [.3, .09, .15], [.12, -.12, -.58], "#ebd179");
+    sniperModel.scale.setScalar(.72);
     const shotgunModel = makeWeaponModel("shotgun");
     weaponPart(shotgunModel, [.34, .32, .5], [.12, -.1, -.1], "#6f4936");
     weaponPart(shotgunModel, [.2, .18, .82], [.12, -.04, -.67], "#6bdbe8", "#28cde3");
@@ -1046,6 +1219,26 @@
     const grenade = new THREE.Mesh(new THREE.BoxGeometry(.34, .38, .34), weaponMat("#3b7757"));
     grenade.position.set(.2, -.19, -.34); bombModel.add(grenade);
     weaponPart(bombModel, [.12, .13, .12], [.2, .06, -.34], "#d5b956");
+    function addBlockSight(model, x, y, z, scale = 1) {
+      const sight = new THREE.Group();
+      sight.position.set(x, y, z);
+      sight.scale.setScalar(scale);
+      model.add(sight);
+      const addSightPart = (size, position, color = "#111715") => {
+        const part = weaponPart(sight, size, position, color);
+        part.userData.weaponAttachment = true;
+      };
+      addSightPart([.24, .055, .15], [0, 0, 0]);
+      addSightPart([.055, .2, .085], [-.092, .12, 0]);
+      addSightPart([.055, .2, .085], [.092, .12, 0]);
+      addSightPart([.24, .055, .085], [0, .23, 0]);
+      addSightPart([.055, .065, .055], [0, .065, -.046], "#36c9a0");
+    }
+    addBlockSight(rifleModel, .12, .29, -.2);
+    addBlockSight(pistolModel, .15, .08, -.18, .65);
+    addBlockSight(sniperModel, .12, .06, -.05, .78);
+    addBlockSight(shotgunModel, .12, .1, -.25, .9);
+    addBlockSight(burstModel, .12, .24, -.12);
     const skinMat = weaponMat("#c99570");
     function armPart(size, position, material, rotation = 0) {
       const mesh = new THREE.Mesh(new THREE.BoxGeometry(...size), material);
@@ -1053,31 +1246,64 @@
     }
     const playerArm = armPart([.56, .48, 1.7], [.58, -.48, -.08], skinMat, .08);
     const playerArmParts = [playerArm];
+    const paletteColorSet = new Set(["#287dff", "#4edfff"]);
+    for (let shade = 0; shade < 10 && paletteColorSet.size < 100; shade++) {
+      for (let hue = 0; hue < 10 && paletteColorSet.size < 100; hue++) {
+        const color = new THREE.Color().setHSL(hue / 10, .86, .22 + shade * .05).getHexString();
+        paletteColorSet.add(`#${color}`);
+      }
+    }
+    const paletteColors = Array.from(paletteColorSet);
+    function updateColorPalette(paletteId, color) {
+      document.querySelectorAll(`#${paletteId} [data-color]`).forEach(button => {
+        const selected = button.dataset.color === color;
+        button.classList.toggle("selected", selected);
+        button.setAttribute("aria-pressed", String(selected));
+      });
+    }
+    function populateColorPalette(paletteId, onSelect) {
+      const palette = document.querySelector(`#${paletteId}`);
+      paletteColors.forEach(color => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.dataset.color = color;
+        button.style.backgroundColor = color;
+        button.title = color;
+        button.setAttribute("aria-label", color);
+        button.addEventListener("click", () => onSelect(color));
+        palette.append(button);
+      });
+    }
     function applyCharacterSkin(color) {
       playerSkinColor = color;
       playerArmParts.forEach(part => part.material.color.set(color));
       document.querySelectorAll("[data-player-skin]").forEach(button => {
         button.classList.toggle("equipped", characterSkinColors[button.dataset.playerSkin] === color);
       });
-      document.querySelector("#custom-player-skin").value = color;
+      document.querySelector("#debug-player-color").value = color;
+      updateColorPalette("custom-player-palette", color);
     }
+    populateColorPalette("custom-player-palette", applyCharacterSkin);
+    populateColorPalette("custom-weapon-palette", color => {
+      customWeaponColor = color;
+      weaponColorCustomized = true;
+      document.querySelector("#debug-gun-color").value = color;
+      updateColorPalette("custom-weapon-palette", color);
+      applyPrimarySkin();
+    });
     document.querySelector("#character-skin-shop").addEventListener("click", event => {
       const button = event.target.closest("[data-player-skin]");
       if (button) applyCharacterSkin(characterSkinColors[button.dataset.playerSkin]);
     });
-    document.querySelector("#custom-player-skin").addEventListener("input", event => applyCharacterSkin(event.target.value));
     applyCharacterSkin(playerSkinColor);
     document.querySelector("#debug-player-color").addEventListener("input", event => applyCharacterSkin(event.target.value));
     document.querySelector("#debug-gun-color").addEventListener("input", event => {
       customWeaponColor = event.target.value;
+      weaponColorCustomized = true;
       applyPrimarySkin();
-      document.querySelector("#custom-weapon-skin").value = customWeaponColor;
+      updateColorPalette("custom-weapon-palette", customWeaponColor);
     });
-    document.querySelector("#custom-weapon-skin").addEventListener("input", event => {
-      customWeaponColor = event.target.value;
-      document.querySelector("#debug-gun-color").value = customWeaponColor;
-      applyPrimarySkin();
-    });
+    updateColorPalette("custom-weapon-palette", customWeaponColor);
     const muzzle = new THREE.PointLight("#62eaff", 0, 4);
     muzzle.position.set(.12, -.12, -1.28); weapon.add(muzzle);
     const muzzleFlash = new THREE.Mesh(
@@ -1109,7 +1335,11 @@
         : inventory.selected === 3 ? "Melee" : `${player.grenades} grenades`;
       ui.ammo.textContent = player.reload > 0 ? "Reloading…" : ammoText;
       ui.bombs.textContent = inventory.selected === 4 ? `${player.grenades}` : "💣";
-      ui.round.textContent = `${roundNumber} · ${mobs.length}/1`;
+      const enemiesRemaining = mobs.filter(bot => bot.team === "enemy").length;
+      const alliesRemaining = mobs.filter(bot => bot.team === "ally").length;
+      ui.round.textContent = matchMode === "2v2"
+        ? `${roundNumber} · ${enemiesRemaining}/2 enemies · ${alliesRemaining} ally`
+        : `${roundNumber} · ${enemiesRemaining}/1`;
       ui.score.textContent = roundWins;
       ui.clock.textContent = Math.sin(elapsed / 24 * Math.PI * 2) < -.45 ? "☾ Night" : "☀ Day";
       const cashText = Number.isFinite(inventory.cash) ? inventory.cash.toLocaleString("en-US") : "∞";
@@ -1139,6 +1369,18 @@
         button.classList.toggle("equipped", inventory.pistolSkin === id);
         button.textContent = `${pistolSkinNames[id]} · ${inventory.pistolSkin === id ? "EQUIPPED" : owned ? "OWNED · SELECT" : `$${pistolSkinPrices[id].toLocaleString("en-US")}`}`;
       });
+      document.querySelectorAll("[data-sniper-skin]").forEach(button => {
+        const id = button.dataset.sniperSkin, owned = inventory.sniperSkins.has(id);
+        button.classList.toggle("equipped", inventory.sniperSkin === id);
+        button.textContent = `${sniperSkinNames[id]} · ${inventory.sniperSkin === id ? "EQUIPPED" : owned ? "OWNED · SELECT" : `$${sniperSkinPrices[id].toLocaleString("en-US")}`}`;
+      });
+      document.querySelectorAll("[data-set-skin]").forEach(button => {
+        const id = button.dataset.setSkin;
+        const owned = inventory.weaponSets.has(id);
+        const equipped = inventory.skin === id && inventory.pistolSkin === id && inventory.sniperSkin === id;
+        button.classList.toggle("equipped", equipped);
+        button.textContent = `${skinNames[id]} · ${equipped ? "EQUIPPED ON ALL GUNS" : owned ? "OWNED · EQUIP ALL" : `$${skinPrices[id].toLocaleString("en-US")}`}`;
+      });
       document.querySelectorAll(".slot").forEach(slot => slot.classList.toggle("active", Number(slot.dataset.slot) === inventory.selected));
     }
     function applySkinToModel(model, skinId, palettes, customColor = null, skipDragonfireParts = false) {
@@ -1147,7 +1389,8 @@
       dragonfireCrest.visible = inventory.primary === "rifle" && inventory.skin === "dragonfire";
       let index = 0;
       model.traverse(part => {
-        if (!part.isMesh || !part.material || (skipDragonfireParts && part.userData.dragonfireDecoration)) return;
+        if (!part.isMesh || !part.material || part.userData.weaponAttachment ||
+            (skipDragonfireParts && part.userData.dragonfireDecoration)) return;
         if (!part.userData.originalWeaponMaterial) part.userData.originalWeaponMaterial = part.material.clone();
         const original = part.userData.originalWeaponMaterial;
         const material = original.clone();
@@ -1171,7 +1414,29 @@
       });
     }
     function applyPrimarySkin() {
+      if (inventory.primary === "sniper") {
+        const weaponColor = inventory.sniperSkin === "classic" && weaponColorCustomized ? customWeaponColor : null;
+        applySkinToModel(weaponModels.get("sniper"), inventory.sniperSkin, sniperSkinPalettes, weaponColor);
+        return;
+      }
       applySkinToModel(weaponModels.get(inventory.primary), inventory.skin, skinPalettes, customWeaponColor, true);
+    }
+    function applySniperSkin(id) {
+      if (!inventory.sniperSkins.has(id)) {
+        const price = sniperSkinPrices[id];
+        if (inventory.cash < price) { say(`You need $${price.toLocaleString("en-US")} to buy this skin.`); return; }
+        inventory.cash -= price;
+        inventory.sniperSkins.add(id);
+      }
+      inventory.sniperSkin = id;
+      if (inventory.primary !== "sniper") {
+        inventory.primary = "sniper";
+        setWeapon(1);
+      } else {
+        applyPrimarySkin();
+      }
+      updateUI();
+      say(`Equipped ${sniperSkinNames[id]} skin.`);
     }
     function applyPistolSkin() {
       applySkinToModel(weaponModels.get("pistol"), inventory.pistolSkin, pistolSkinPalettes);
@@ -1207,7 +1472,7 @@
           inventory.skins.add(id);
         }
         inventory.skin = id;
-        if ((id === "dragonfire" || id === "solar") && inventory.primary !== "rifle") {
+        if ((id === "dragonfire" || id === "solar" || id === "forest") && inventory.primary !== "rifle") {
           inventory.primary = "rifle";
           setWeapon(1);
         }
@@ -1215,6 +1480,10 @@
         updateUI();
         say(`Equipped ${skinNames[id]} skin.`);
       });
+    });
+    document.querySelector("#sniper-skin-shop").addEventListener("click", event => {
+      const button = event.target.closest("[data-sniper-skin]");
+      if (button) applySniperSkin(button.dataset.sniperSkin);
     });
     document.querySelector("#pistol-skin-shop").addEventListener("click", event => {
       const button = event.target.closest("[data-pistol-skin]");
@@ -1231,6 +1500,35 @@
       updateUI();
       say(`Equipped ${pistolSkinNames[id]} pistol skin.`);
     });
+    document.querySelector("#weapon-set-shop").addEventListener("click", event => {
+      const button = event.target.closest("[data-set-skin]");
+      if (!button) return;
+      const id = button.dataset.setSkin;
+      if (!skinPalettes[id] || !pistolSkinPalettes[id] || !sniperSkinPalettes[id]) {
+        console.error(`Weapon skin set "${id}" is missing a weapon palette.`);
+        say("This weapon set is unavailable.");
+        return;
+      }
+      if (!inventory.weaponSets.has(id)) {
+        const price = skinPrices[id];
+        if (inventory.cash < price) {
+          say(`You need $${price.toLocaleString("en-US")} to buy this weapon set.`);
+          return;
+        }
+        inventory.cash -= price;
+        inventory.weaponSets.add(id);
+        inventory.skins.add(id);
+        inventory.pistolSkins.add(id);
+        inventory.sniperSkins.add(id);
+      }
+      inventory.skin = id;
+      inventory.pistolSkin = id;
+      inventory.sniperSkin = id;
+      applyPrimarySkin();
+      applyPistolSkin();
+      updateUI();
+      say(`${skinNames[id]} equipped on all guns.`);
+    });
     ui.username.addEventListener("input", updateUI);
     function say(text) {
       ui.toast.textContent = text; ui.toast.style.opacity = 1; toastTimer = 2;
@@ -1245,48 +1543,60 @@
       pulseEffect(document.querySelector("#hit-marker"), "show", 300);
       pulseEffect(document.body, "hit-confirm", 160);
     }
-    function makeMob(x, z) {
+    function makeMob(x, z, team = "enemy") {
+      const teamColors = team === "ally"
+        ? { body: "#287dff", head: "#73b5ff", helmet: "#174da8", visor: "#a7e2ff", arms: "#2472d9", cuff: "#74b9ff", legs: "#174da8", gun: "#173c70", barrel: "#4094ff", stock: "#163660", emissive: "#287dff", hit: "#8de9ff" }
+        : { body: "#e32636", head: "#ff4a55", helmet: "#a90f25", visor: "#ff8990", arms: "#d51c32", cuff: "#ff5963", legs: "#b8142b", gun: "#8f1023", barrel: "#f04a55", stock: "#b8172d", emissive: "#d91c35", hit: "#ff4d37" };
       const group = new THREE.Group();
       group.position.set(x, 0, z);
-      const body = new THREE.Mesh(box, mat("#e32636"));
+      const body = new THREE.Mesh(box, mat(teamColors.body));
       body.position.y = .88; body.scale.set(.62, .78, .38); body.castShadow = true; group.add(body);
-      const head = new THREE.Mesh(box, mat("#ff4a55"));
+      const head = new THREE.Mesh(box, mat(teamColors.head));
       head.position.y = 1.52; head.scale.set(.48, .48, .45); head.castShadow = true; group.add(head);
       head.userData.hitZone = "head";
-      const helmet = new THREE.Mesh(box, mat("#a90f25"));
+      const helmet = new THREE.Mesh(box, mat(teamColors.helmet));
       helmet.position.set(0, 1.77, 0); helmet.scale.set(.55, .14, .5); group.add(helmet);
       helmet.userData.hitZone = "head";
-      const visor = new THREE.Mesh(box, new THREE.MeshStandardMaterial({ color: "#ff8990", emissive: "#c20d2a", emissiveIntensity: .8 }));
+      const visor = new THREE.Mesh(box, new THREE.MeshStandardMaterial({ color: teamColors.visor, emissive: teamColors.emissive, emissiveIntensity: .8 }));
       visor.position.set(0, 1.53, -.235); visor.scale.set(.35, .09, .04); group.add(visor);
       visor.userData.hitZone = "head";
-      const armL = new THREE.Mesh(box, mat("#d51c32"));
-      const armR = new THREE.Mesh(box, mat("#d51c32"));
+      const armL = new THREE.Mesh(box, mat(teamColors.arms));
+      const armR = new THREE.Mesh(box, mat(teamColors.arms));
       armL.position.set(-.39, .83, -.24); armR.position.set(.39, .83, -.32);
       armL.scale.set(.2, .58, .22); armR.scale.set(.2, .58, .22);
       armL.castShadow = true; armR.castShadow = true;
       for (const [xOffset, zOffset] of [[-.39, -.24], [.39, -.32]]) {
-        const cuff = new THREE.Mesh(box, mat("#ff5963"));
+        const cuff = new THREE.Mesh(box, mat(teamColors.cuff));
         cuff.position.set(xOffset, .59, zOffset); cuff.scale.set(.21, .09, .23); group.add(cuff);
       }
       const legs = [-.17, .17].map(offset => {
-        const leg = new THREE.Mesh(box, mat("#b8142b"));
+        const leg = new THREE.Mesh(box, mat(teamColors.legs));
         leg.position.set(offset, .25, 0); leg.scale.set(.23, .5, .28); leg.castShadow = true; group.add(leg); return leg;
       });
-      const gunMat = new THREE.MeshStandardMaterial({ color: "#8f1023", metalness: .5, roughness: .35, emissive: "#d91c35", emissiveIntensity: .15 });
+      const gunMat = new THREE.MeshStandardMaterial({ color: teamColors.gun, metalness: .5, roughness: .35, emissive: teamColors.emissive, emissiveIntensity: .15 });
       const gun = new THREE.Group();
       const receiver = new THREE.Mesh(new THREE.BoxGeometry(.2, .17, .47), gunMat);
-      const barrel = new THREE.Mesh(new THREE.BoxGeometry(.11, .1, .55), mat("#f04a55"));
-      const stock = new THREE.Mesh(box, mat("#b8172d"));
+      const barrel = new THREE.Mesh(new THREE.BoxGeometry(.11, .1, .55), mat(teamColors.barrel));
+      const stock = new THREE.Mesh(box, mat(teamColors.stock));
       receiver.position.z = -.18; barrel.position.set(0, .03, -.66); stock.position.z = .19; stock.scale.set(.15, .15, .25);
       gun.add(receiver, barrel, stock); gun.position.set(.25, .79, -.18); group.add(gun);
       scene.add(group);
-      const mob = { group, body, armL, armR, legs, gunMat, gun, x, z, vx: 0, vz: 0, hp: 3, flash: 0, hitTimer: 0, shootTimer: 1.2 + Math.random() * 1.2, phase: Math.random() * Math.PI * 2, shotKick: 0 };
+      const mob = { group, body, armL, armR, legs, gunMat, gun, colors: teamColors, team, x, z, vx: 0, vz: 0, hp: 3, flash: 0, hitTimer: 0, shootTimer: 1.2 + Math.random() * 1.2, phase: Math.random() * Math.PI * 2, shotKick: 0 };
       group.userData.mob = mob; mobs.push(mob);
     }
     function startRound() {
-      makeMob((Math.random() - .5) * 2, -12);
+      for (const mob of mobs) scene.remove(mob.group);
+      mobs.length = 0;
+      player.hp = 5;
+      if (matchMode === "2v2") {
+        makeMob(-12, -1.5, "enemy");
+        makeMob(-12, 3, "enemy");
+        makeMob(9, 1, "ally");
+      } else {
+        makeMob((Math.random() - .5) * 2, -12, "enemy");
+      }
       roundStarting = false;
-      say(`1v1 · ${mapConfigs[selectedMap].name} · Round ${roundNumber}`);
+      say(`${matchMode} · ${mapConfigs[selectedMap].name} · Round ${roundNumber}`);
     }
     function createTracer(start, end, color) {
       const material = new THREE.LineBasicMaterial({ color, transparent: true, opacity: .95 });
@@ -1305,28 +1615,41 @@
         effects.push({ mesh, vx: Math.cos(angle) * speed, vz: Math.sin(angle) * speed, vy: 1 + Math.random() * 2, life: .6, maxLife: .6 });
       }
     }
-    function damageMob(mob, damage = 1) {
+    function finishRoundLoss() {
+      if (!running) return;
+      running = false;
+      botWins++;
+      ui.title.textContent = "The other team won this round";
+      ui.copy.textContent = `Score: ${roundWins} - ${botWins}. You have $${inventory.cash.toLocaleString("en-US")}. Click to play again.`;
+      updateUI();
+      ui.start.textContent = "PLAY AGAIN";
+      ui.overlay.style.display = "grid";
+    }
+    function damageMob(mob, damage = 1, reward = true) {
+      if (mob.hp <= 0) return;
       mob.hp -= damage; mob.flash = .12;
       if (mob.hp <= 0) {
         scene.remove(mob.group);
         mobs.splice(mobs.indexOf(mob), 1);
-        inventory.cash += 250;
-        burstParticles(mob.x, mob.z, "#d995ff");
-        say("Bot eliminated · +$250");
-        if (mobs.length === 0 && running && !roundStarting) {
+        if (reward) inventory.cash += 250;
+        burstParticles(mob.x, mob.z, mob.team === "ally" ? "#65adff" : "#d995ff");
+        say(mob.team === "ally" ? "Your teammate was eliminated." : reward ? "Enemy bot eliminated · +$250" : "Enemy bot eliminated!");
+        const enemiesRemaining = mobs.some(bot => bot.team === "enemy");
+        if (!enemiesRemaining && running && !roundStarting) {
           roundWins++;
           inventory.cash += 1000;
           roundDelay = 3;
           roundStarting = true;
-          say(`You won the round! +$1,000 · Next round in 3 seconds`);
+          say(`Your team won the round! +$1,000 · Next round in 3 seconds`);
           player.hp = 5;
           updateUI();
         }
+        if (player.hp <= 0 && !mobs.some(bot => bot.team === "ally")) finishRoundLoss();
       }
     }
     function getAimHit() {
       raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
-      const mobParts = mobs.flatMap(mob => mob.group.children);
+      const mobParts = mobs.filter(mob => mob.team === "enemy").flatMap(mob => mob.group.children);
       const worldParts = getWorldParts();
       const mobHit = raycaster.intersectObjects(mobParts, false).find(item => item.distance < 24);
       const worldHit = raycaster.intersectObjects(worldParts, false).find(item => item.distance < 24);
@@ -1364,7 +1687,7 @@
       if (player.fireCooldown > 0) return;
       player.fireCooldown = .48; recoil = .06;
       knifeSwing = .28;
-      const target = [...mobs].find(mob => {
+      const target = mobs.filter(mob => mob.team === "enemy" && mob.hp > 0).find(mob => {
         const dx = mob.x - player.x, dz = mob.z - player.z, distance = Math.hypot(dx, dz);
         const dot = (dx * player.facing.x + dz * player.facing.z) / Math.max(distance, .01);
         return distance < 2.4 && dot > .15;
@@ -1375,7 +1698,7 @@
       } else say("The knife only hits nearby targets in front of you.");
     }
     function fire() {
-      if (!running || player.fireCooldown > 0) return;
+      if (!running || player.hp <= 0 || player.fireCooldown > 0) return;
       if (inventory.selected === 3) { useKnife(); return; }
       if (inventory.selected === 4) { throwBomb(); return; }
       if (player.reload > 0) return;
@@ -1396,7 +1719,7 @@
       for (let i = 0; i < pellets; i++) {
         const spread = definition.spread * (aiming ? .45 : 1);
         raycaster.setFromCamera(new THREE.Vector2((Math.random() - .5) * spread, (Math.random() - .5) * spread), camera);
-        const mobParts = mobs.flatMap(mob => mob.group.children);
+        const mobParts = mobs.filter(mob => mob.team === "enemy").flatMap(mob => mob.group.children);
         const mobHit = raycaster.intersectObjects(mobParts, false).find(hit => hit.distance < 30);
         const worldParts = getWorldParts();
         const worldHit = raycaster.intersectObjects(worldParts, false).find(hit => hit.distance < 30);
@@ -1486,22 +1809,17 @@
     }
     let firing = false;
     function pointerAction(event) {
-      if (!running) return;
-      if (document.pointerLockElement !== canvas) {
-        canvas.requestPointerLock?.();
-        return;
-      }
+      if (!running || (event.button !== 0 && event.button !== 2)) return;
+      if (document.pointerLockElement !== canvas) canvas.requestPointerLock?.();
       if (event.button === 0) {
         firing = true;
         fire();
       }
-      if (event.button === 2) aiming = inventory.selected <= 2;
+      if (event.button === 2) {
+        aiming = inventory.selected <= 2;
+        event.preventDefault();
+      }
     }
-    addEventListener("keydown", event => {
-      if (event.target instanceof HTMLInputElement) return;
-      const key = event.key.toLowerCase();
-      if (key === "v" || key === "x") keys.add(key);
-    });
     function gather() {
       if (!running) return;
       raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
@@ -1520,6 +1838,8 @@
       inventory.owned = new Set(Object.keys(weapons));
       inventory.skins = new Set(Object.keys(skinPalettes));
       inventory.pistolSkins = new Set(Object.keys(pistolSkinPalettes));
+      inventory.sniperSkins = new Set(Object.keys(sniperSkinPalettes));
+      inventory.weaponSets = new Set(["shadowCircuit"]);
       updateUI();
       say("All weapons and skins unlocked for free!");
     }
@@ -1577,6 +1897,7 @@
         document.body.classList.remove("aiming");
         document.body.classList.remove("sniper-aim");
         if (debugMenuOpen) return;
+        if (chat.classList.contains("open")) return;
         running = false;
         ui.title.textContent = "Paused";
         ui.copy.textContent = "The Block Arena is waiting for you.";
@@ -1587,6 +1908,7 @@
     addEventListener("keydown", event => {
       if (event.target instanceof HTMLInputElement) return;
       const key = event.key.toLowerCase();
+      if (key === "v" || key === "x") keys.add(key);
       if (key === "f3") {
         event.preventDefault();
         if (!authenticated) return;
@@ -1597,8 +1919,8 @@
       if (["arrowup", "arrowdown", "arrowleft", "arrowright", "shift", "control", " "].includes(key)) event.preventDefault();
       keys.add(key);
       if (key === "g" && !event.repeat) unlockEverything();
-      if (key === " " && running && !debugFly && !event.repeat && player.y <= 0) player.vy = 6.2;
-      if (key === "control" && running && !event.repeat && !debugFly && player.y <= .1 && player.slideCooldown <= 0) {
+      if (key === " " && running && player.hp > 0 && !debugFly && !event.repeat && player.y <= 0) player.vy = 6.2;
+      if (key === "control" && running && player.hp > 0 && !event.repeat && !debugFly && player.y <= .1 && player.slideCooldown <= 0) {
         const moveLength = Math.hypot(player.vx, player.vz);
         player.slideX = moveLength > .5 ? player.vx / moveLength : -Math.sin(player.yaw);
         player.slideZ = moveLength > .5 ? player.vz / moveLength : -Math.cos(player.yaw);
@@ -1610,8 +1932,8 @@
           say("Sliding!");
         }
       }
-      if (key === "f" && running) gather();
-      if (key === "r" && running) reload();
+      if (key === "f" && running && player.hp > 0) gather();
+      if (key === "r" && running && player.hp > 0) reload();
       if (["1", "2", "3", "4"].includes(key)) setWeapon(Number(key));
       else updateUI();
     });
@@ -1645,7 +1967,7 @@
       player.burst = Math.max(0, player.burst - dt);
       player.invuln = Math.max(0, player.invuln - dt);
       player.fireCooldown = Math.max(0, player.fireCooldown - dt);
-      if ((firing || keys.has("v") || keys.has("x")) && inventory.selected <= 2) fire();
+      if (player.hp > 0 && (firing || keys.has("v") || keys.has("x")) && inventory.selected <= 2) fire();
       if (player.reload > 0 && (player.reload -= dt) <= 0) {
         player.ammo[player.reloadWeapon] = weapons[player.reloadWeapon].mag;
       }
@@ -1661,7 +1983,9 @@
           const { x, z } = projectile.target;
           scene.remove(projectile.mesh);
           projectiles.splice(i, 1);
-          for (const mob of [...mobs]) if (Math.hypot(mob.x - x, mob.z - z) < 4) damageMob(mob, 2);
+          for (const mob of [...mobs]) {
+            if (mob.team === "enemy" && Math.hypot(mob.x - x, mob.z - z) < 4) damageMob(mob, 2);
+          }
           burstParticles(x, z, "#ffb84d", 26);
           say("Grenade exploded!");
         }
@@ -1677,8 +2001,13 @@
         player.y = Math.max(0, player.y + player.vy * dt);
         if (player.y === 0) player.vy = 0;
       }
-      const forward = (keys.has("w") || keys.has("arrowup") ? 1 : 0) - (keys.has("s") || keys.has("arrowdown") ? 1 : 0);
-      const side = (keys.has("d") || keys.has("arrowright") ? 1 : 0) - (keys.has("a") || keys.has("arrowleft") ? 1 : 0);
+      const forward = player.hp > 0
+        ? (keys.has("w") || keys.has("arrowup") ? 1 : 0) - (keys.has("s") || keys.has("arrowdown") ? 1 : 0)
+        : 0;
+      const side = player.hp > 0
+        ? (keys.has("d") || keys.has("arrowright") ? 1 : 0) - (keys.has("a") || keys.has("arrowleft") ? 1 : 0)
+        : 0;
+      if (player.hp <= 0) player.vx = player.vz = 0;
       let dx = -Math.sin(player.yaw) * forward + Math.cos(player.yaw) * side;
       let dz = -Math.cos(player.yaw) * forward - Math.sin(player.yaw) * side;
       const length = Math.hypot(dx, dz);
@@ -1722,9 +2051,22 @@
         mob.hitTimer = Math.max(0, mob.hitTimer - dt);
         mob.shootTimer -= dt;
         mob.flash = Math.max(0, mob.flash - dt);
-        mob.gunMat.emissive.set(mob.flash > 0 ? "#ff4d37" : "#35aebb");
+        mob.gunMat.emissive.set(mob.flash > 0 ? mob.colors.hit : mob.colors.emissive);
         mob.gunMat.emissiveIntensity = mob.flash > 0 ? .8 : .15;
-        const vx = player.x - mob.x, vz = player.z - mob.z, distance = Math.hypot(vx, vz);
+        const targetOptions = mob.team === "enemy"
+          ? [
+            ...(player.hp > 0 ? [{ type: "player", x: player.x, z: player.z, y: player.y }] : []),
+            ...mobs.filter(other => other.team === "ally" && other.hp > 0)
+              .map(other => ({ type: "bot", bot: other, x: other.x, z: other.z, y: 0 }))
+          ]
+          : mobs.filter(other => other.team === "enemy" && other.hp > 0)
+            .map(other => ({ type: "bot", bot: other, x: other.x, z: other.z, y: 0 }));
+        if (!targetOptions.length) continue;
+        const targetInfo = targetOptions.reduce((nearest, candidate) =>
+          Math.hypot(candidate.x - mob.x, candidate.z - mob.z) <
+          Math.hypot(nearest.x - mob.x, nearest.z - mob.z) ? candidate : nearest
+        );
+        const vx = targetInfo.x - mob.x, vz = targetInfo.z - mob.z, distance = Math.hypot(vx, vz);
         if (distance > 2.2) {
           const speed = .85 * dt;
           const nx = mob.x + vx / distance * speed, nz = mob.z + vz / distance * speed;
@@ -1737,47 +2079,55 @@
         if (distance > .01) mob.group.rotation.y = Math.atan2(-vx, -vz);
         mob.group.rotation.z = THREE.MathUtils.clamp(-mob.vx * .035, -.12, .12);
         mob.body.position.y = .58 + (mob.flash > 0 ? .06 : 0);
-        mob.body.material.color.set(mob.flash > 0 ? "#ffffff" : "#e32636");
+        mob.body.material.color.set(mob.flash > 0 ? "#ffffff" : mob.colors.body);
         mob.armL.rotation.x = Math.sin(elapsed * 8 + mob.phase) * (movingMob ? .32 : .08);
         mob.armR.rotation.x = -Math.sin(elapsed * 8 + mob.phase) * (movingMob ? .32 : .08);
         mob.legs[0].rotation.x = movingMob ? Math.sin(elapsed * 8 + mob.phase) * .42 : 0;
         mob.legs[1].rotation.x = movingMob ? -Math.sin(elapsed * 8 + mob.phase) * .42 : 0;
         mob.shotKick = Math.max(0, mob.shotKick - dt * 2.8);
         mob.gun.position.z = -.18 + mob.shotKick * 1.3;
-        if (distance < 8 && mob.shootTimer <= 0 && player.invuln <= 0) {
+        const targetProtected = targetInfo.type === "player"
+          ? player.invuln > 0
+          : targetInfo.bot.hitTimer > 0;
+        if (distance < 8 && mob.shootTimer <= 0 && !targetProtected) {
           mob.shootTimer = 1.8 + Math.random() * 1.2;
           mob.shotKick = .12;
           const origin = mob.group.localToWorld(new THREE.Vector3(.25, .79, -.86));
-          const target = new THREE.Vector3(player.x, (keys.has("shift") ? 1.12 : 1.62) + player.y - .2, player.z);
-          const shotDirection = target.clone().sub(origin);
+          const targetPoint = new THREE.Vector3(
+            targetInfo.x,
+            targetInfo.type === "player" ? (keys.has("shift") ? 1.12 : 1.62) + player.y - .2 : 1.25,
+            targetInfo.z
+          );
+          const shotDirection = targetPoint.clone().sub(origin);
           const shotDistance = shotDirection.length();
           shotDirection.normalize();
           raycaster.set(origin, shotDirection);
           const worldParts = getWorldParts();
           const obstruction = raycaster.intersectObjects(worldParts, false).find(hit => hit.distance < shotDistance - .35);
-          const movingPlayer = Math.hypot(player.vx, player.vz) > 1.5 || player.y > .1;
-          const hitChance = player.y > .1 ? .12 : movingPlayer ? .2 : .32;
-          const hitsPlayer = !obstruction && Math.random() < hitChance;
-          const impact = hitsPlayer ? target : obstruction?.point || origin.clone().addScaledVector(shotDirection, shotDistance);
-          createTracer(origin, impact, "#ff765e");
-          mob.gunMat.emissive.set("#ff4d37");
+          const targetMoving = targetInfo.type === "player"
+            ? Math.hypot(player.vx, player.vz) > 1.5 || player.y > .1
+            : Math.hypot(targetInfo.bot.vx, targetInfo.bot.vz) > .3;
+          const hitChance = targetInfo.type === "player" && player.y > .1 ? .12 : targetMoving ? .24 : .4;
+          const hitsTarget = !obstruction && Math.random() < hitChance;
+          const impact = hitsTarget ? targetPoint : obstruction?.point || origin.clone().addScaledVector(shotDirection, shotDistance);
+          const tracerColor = mob.team === "ally" ? "#65bfff" : "#ff765e";
+          createTracer(origin, impact, tracerColor);
+          mob.gunMat.emissive.set(mob.colors.hit);
           mob.gunMat.emissiveIntensity = .8;
           mob.flash = .12;
-          burstParticles(origin.x, origin.z, "#ff9b58", 3);
-          if (hitsPlayer) {
-            player.hp--; player.invuln = 1.4; mob.hitTimer = 1.2; hitShake = 1; pulseEffect(document.querySelector("#hit-overlay"), "show", 450); say("The Gloomling hit you!");
+          burstParticles(origin.x, origin.z, tracerColor, 3);
+          if (hitsTarget && targetInfo.type === "player") {
+            player.hp--; player.invuln = 1.4; mob.hitTimer = 1.2; hitShake = 1; pulseEffect(document.querySelector("#hit-overlay"), "show", 450);
+            say(player.hp <= 0 && mobs.some(bot => bot.team === "ally") ? "You are down! Your teammate is still fighting." : "The Gloomling hit you!");
             burstParticles(player.x, player.z, "#ff758d", 5);
+          } else if (hitsTarget) {
+            targetInfo.bot.hitTimer = .45;
+            burstParticles(targetInfo.bot.x, targetInfo.bot.z, mob.team === "ally" ? "#65bfff" : "#ff758d", 5);
+            damageMob(targetInfo.bot, 1, false);
           } else if (obstruction) {
             burstParticles(impact.x, impact.z, "#ffb16e", 3);
           }
-          if (player.hp <= 0) {
-            running = false;
-            botWins++;
-            ui.title.textContent = "The bot won this round";
-            ui.copy.textContent = `Score: ${roundWins} - ${botWins}. You have $${inventory.cash.toLocaleString("en-US")}. Click to play again.`;
-            updateUI();
-            ui.start.textContent = "PLAY AGAIN"; ui.overlay.style.display = "grid";
-          }
+          if (player.hp <= 0 && !mobs.some(bot => bot.team === "ally")) finishRoundLoss();
         }
       }
       for (let i = tracers.length - 1; i >= 0; i--) {
