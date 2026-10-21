@@ -25,6 +25,8 @@
     #crouch-label { color: #f4d77d; }
     .stat-label { color: #aebdcc; }
     #health { color: #ff8378; letter-spacing: 2px; }
+    #ping { color: #aebdcc; }
+    #fps { color: #91e5a7; }
     #hotbar { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); display: flex; gap: 7px; padding: 8px; }
     .slot { width: 62px; height: 58px; display: grid; place-items: center; position: relative; border: 1px solid #ffffff2c; border-radius: 8px; background: #263240dc; font-size: 23px; }
     .weapon-icon { width: 34px; height: 25px; margin-top: 5px; overflow: visible; filter: drop-shadow(0 2px 2px #0009); }
@@ -53,6 +55,7 @@
     #hit-overlay.show { animation: hit-flash .42s ease-out; }
     #hit-marker { position: fixed; z-index: 3; left: 50%; top: 50%; transform: translate(-50%, -50%) scale(.35) rotate(-45deg); color: #fff; font: 700 25px/1 system-ui; opacity: 0; pointer-events: none; text-shadow: 0 0 8px #ff485c; }
     #hit-marker.show { animation: hit-pop .28s cubic-bezier(.15, .85, .3, 1.3); }
+    #cinematic-vignette { position: fixed; z-index: 1; inset: 0; pointer-events: none; background: linear-gradient(180deg, #07111a20 0%, transparent 22%, transparent 68%, #07111a45 100%), radial-gradient(ellipse at center, transparent 48%, #05091236 100%); }
     #scope { display: none; position: fixed; z-index: 1; inset: 0; pointer-events: none; background: radial-gradient(circle, transparent 0 25vmin, #05080ddd 26vmin 100%); }
     #scope::before, #scope::after { content: ""; position: absolute; left: 50%; top: 50%; background: #d6faffbb; transform: translate(-50%, -50%); }
     #scope::before { width: 1px; height: 100vh; }
@@ -136,6 +139,8 @@
     <div><span class="stat-label">Level</span> <b id="level">1</b></div>
     <div><span class="stat-label">Wins</span> <b id="score">0</b></div>
     <div><span class="stat-label">Nightfall</span> <b id="clock">☀ Day</b></div>
+    <div title="Network ping is unavailable because this game is offline."><span class="stat-label">Ping</span> <b id="ping">Offline</b></div>
+    <div><span class="stat-label">FPS</span> <b id="fps">--</b></div>
   </div>
   <div id="hotbar" class="panel">
     <div class="slot active" data-slot="1" title="Primary weapon"><span>1</span><svg class="weapon-icon" viewBox="0 0 64 40" role="img" aria-label="Assault rifle"><path class="gun-body" d="M7 13h27l7 4h13v6H42l-5 5H23l-4-5H8z"/><path class="gun-dark" d="M11 18h10v3H11zm23-2h5v5h-5zM27 27h8l-2 9h-5zM49 18h11v3H49z"/><path class="gun-detail" d="M23 13h8v3h-8zm-8 12h5v3h-5z"/><path class="gun-glow" d="M39 18h4v3h-4z"/></svg><b id="primary-label">AR</b></div>
@@ -143,10 +148,11 @@
     <div class="slot" data-slot="3" title="Knife"><span>3</span>🗡️<b>KNIFE</b></div>
     <div class="slot" data-slot="4" title="Bomb"><span>4</span>💣<b id="bomb-count">3</b></div>
   </div>
-  <div id="help" class="panel"><b>WASD</b> Move · <b>Shift</b> Crouch · <b>Ctrl</b> Slide · <b>Space</b> Jump · <b>R</b> Reload · <b>Hold Left Click</b> or <b>V/X</b> Shoot · <b>Right Click</b> Aim sniper · <b>1–4</b> Switch weapons · <b>F3</b> Debug</div>
+  <div id="help" class="panel"><b>WASD</b> Move · <b>Shift</b> Crouch · <b>Ctrl</b> Slide · <b>Space</b> Jump · <b>R</b> Reload · <b>Hold Left Click</b> or <b>V/X</b> Shoot · <b>Hold Right Click</b> Aim (all guns) · <b>1–4</b> Switch weapons · <b>F3</b> Debug</div>
   <div id="toast" class="panel"></div>
   <div id="hit-overlay"></div>
   <div id="hit-marker" aria-hidden="true">×</div>
+  <div id="cinematic-vignette"></div>
   <div id="scope"></div>
   <div id="crosshair" aria-hidden="true"><i></i><i></i><i></i><i></i><b></b></div>
   <div id="overlay">
@@ -266,6 +272,7 @@
       shopCash: document.querySelector("#shop-cash"),
       cash: document.querySelector("#cash"), primaryLabel: document.querySelector("#primary-label"),
       username: document.querySelector("#username"), playerName: document.querySelector("#player-name"),
+      fps: document.querySelector("#fps"),
       scorePlayerName: document.querySelector("#score-player-name"),
       playerRoundScore: document.querySelector("#player-round-score"), botRoundScore: document.querySelector("#bot-round-score")
     };
@@ -386,7 +393,9 @@
     scene.fog = new THREE.Fog("#8fc8db", 28, 68);
     const camera = new THREE.PerspectiveCamera(76, innerWidth / innerHeight, .1, 100);
     const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    let maxPixelRatio = Math.min(devicePixelRatio, 1.5);
+    let renderPixelRatio = maxPixelRatio;
+    renderer.setPixelRatio(renderPixelRatio);
     renderer.setSize(innerWidth, innerHeight);
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -399,7 +408,7 @@
     const sun = new THREE.DirectionalLight("#fff1c2", 3.0);
     sun.position.set(-8, 18, 10);
     sun.castShadow = true;
-    sun.shadow.mapSize.set(2048, 2048);
+    sun.shadow.mapSize.set(1024, 1024);
     sun.shadow.camera.left = -30; sun.shadow.camera.right = 30;
     sun.shadow.camera.top = 30; sun.shadow.camera.bottom = -30;
     scene.add(sun);
@@ -478,6 +487,7 @@
       burst: { name: "Phoenix Burst Rifle", mag: 24, damage: 1, cooldown: .4, reload: 1.4, spread: .018, pellets: 3 }
     };
     let running = false, aiming = false, knifeSwing = 0, reloadAnim = 0, weaponSwap = 0, elapsed = 0, spawnTimer = 0, toastTimer = 0, lastTime = 0, muzzleTimer = 0, walkingTime = 0, wasPointerLocked = false;
+    let uiUpdateTimer = 0;
     let roundNumber = 1, roundWins = 0, botWins = 0, roundDelay = 0, roundStarting = false;
     const box = new THREE.BoxGeometry(1, 1, 1);
     const mat = color => new THREE.MeshStandardMaterial({ color, roughness: .9, flatShading: true });
@@ -623,6 +633,73 @@
     skyDome.frustumCulled = false;
     skyDome.renderOrder = -10;
     scene.add(skyDome);
+    const skyDetails = new THREE.Group();
+    const starPositions = [];
+    for (let i = 0; i < 260; i++) {
+      const y = Math.random() * 2 - 1;
+      const angle = Math.random() * Math.PI * 2;
+      const radius = 74 * Math.sqrt(1 - y * y);
+      starPositions.push(Math.cos(angle) * radius, y * 74, Math.sin(angle) * radius);
+    }
+    const starGeometry = new THREE.BufferGeometry();
+    starGeometry.setAttribute("position", new THREE.Float32BufferAttribute(starPositions, 3));
+    const stars = new THREE.Points(starGeometry, new THREE.PointsMaterial({
+      color: "#d7eaff", size: .24, sizeAttenuation: true, transparent: true, opacity: 0, depthWrite: false
+    }));
+    skyDetails.add(stars);
+    const sunDisc = new THREE.Mesh(
+      new THREE.SphereGeometry(2.1, 20, 16),
+      new THREE.MeshBasicMaterial({ color: "#fff0bc", transparent: true, opacity: 1, depthWrite: false })
+    );
+    const sunHalo = new THREE.Mesh(
+      new THREE.SphereGeometry(3.8, 20, 16),
+      new THREE.MeshBasicMaterial({ color: "#ffca70", transparent: true, opacity: .18, blending: THREE.AdditiveBlending, depthWrite: false })
+    );
+    sunDisc.position.set(-34, 30, -58);
+    sunHalo.position.copy(sunDisc.position);
+    skyDetails.add(sunHalo, sunDisc);
+    const moonDisc = new THREE.Mesh(
+      new THREE.SphereGeometry(1.75, 20, 16),
+      new THREE.MeshBasicMaterial({ color: "#dceaff", transparent: true, opacity: 0, depthWrite: false })
+    );
+    const moonHalo = new THREE.Mesh(
+      new THREE.SphereGeometry(3.3, 20, 16),
+      new THREE.MeshBasicMaterial({ color: "#8ebcff", transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false })
+    );
+    moonDisc.position.set(34, 32, -55);
+    moonHalo.position.copy(moonDisc.position);
+    skyDetails.add(moonHalo, moonDisc);
+    scene.add(skyDetails);
+    const daySkyColor = new THREE.Color();
+    const dayTopColor = new THREE.Color();
+    const nightSkyColor = new THREE.Color();
+    const dayHorizonColor = new THREE.Color();
+    const nightTopColor = new THREE.Color();
+    const environmentColor = new THREE.Color();
+    function updateAtmosphere() {
+      const config = mapConfigs[selectedMap];
+      const daylightWave = (Math.sin(elapsed / 24 * Math.PI * 2) + .45) / .9;
+      const daylight = THREE.MathUtils.smoothstep(daylightWave, 0, 1);
+      daySkyColor.set(config.sky);
+      dayTopColor.set(config.skyTop);
+      nightSkyColor.set(config.nightSky);
+      dayHorizonColor.set(config.skyHorizon);
+      nightTopColor.set(config.nightTop);
+      environmentColor.lerpColors(nightSkyColor, daySkyColor, daylight);
+      scene.background.copy(environmentColor);
+      scene.fog.color.copy(environmentColor);
+      skyMaterial.uniforms.topColor.value.lerpColors(nightTopColor, dayTopColor, daylight);
+      skyMaterial.uniforms.horizonColor.value.lerpColors(nightSkyColor, dayHorizonColor, daylight);
+      ambient.intensity = .5 + daylight * 1.5;
+      sun.intensity = .25 + daylight * 2.75;
+      stars.material.opacity = (1 - daylight) * .9;
+      moonDisc.material.opacity = (1 - daylight) * .95;
+      moonHalo.material.opacity = (1 - daylight) * .16;
+      sunDisc.material.opacity = daylight;
+      sunHalo.material.opacity = daylight * .18;
+      skyDome.position.copy(camera.position);
+      skyDetails.position.copy(camera.position);
+    }
     const pick = (list, seed) => list[Math.floor(seed * list.length) % list.length];
     function random(x, z) {
       const n = Math.sin(x * 127.1 + z * 311.7) * 43758.5453;
@@ -644,6 +721,7 @@
       const centerClear = x * x + z * z < config.clearRadius;
       const type = centerClear ? "grass" : seed > config.stoneAbove ? "stone" : seed < config.waterBelow ? "water" : "grass";
       const base = addCube(x, -.5, z, pick(mats[type], random(x + 11, z + 17)));
+      base.castShadow = false;
       base.userData.cell = { x, z, type };
       const cell = { x, z, type, base, node: null };
       cells.set(cellKey(x, z), cell);
@@ -1302,7 +1380,7 @@
       const pellets = definition.pellets || 1;
       const hitTargets = new Set();
       for (let i = 0; i < pellets; i++) {
-        const spread = definition.spread;
+        const spread = definition.spread * (aiming ? .45 : 1);
         raycaster.setFromCamera(new THREE.Vector2((Math.random() - .5) * spread, (Math.random() - .5) * spread), camera);
         const mobParts = mobs.flatMap(mob => mob.group.children);
         const mobHit = raycaster.intersectObjects(mobParts, false).find(hit => hit.distance < 30);
@@ -1351,8 +1429,9 @@
       camera.rotation.y = player.yaw;
       camera.rotation.x = player.pitch + (hitShake > 0 ? hitShake * .035 : 0);
       camera.rotation.z = -strafeTilt * .012 + (hitShake > 0 ? Math.sin(elapsed * 71) * hitShake * .015 : 0);
-      const sniperAiming = aiming && inventory.selected === 1 && inventory.primary === "sniper";
-      const targetFov = sniperAiming ? 24 : 76;
+      const gunAiming = aiming && inventory.selected <= 2;
+      const sniperAiming = gunAiming && inventory.selected === 1 && inventory.primary === "sniper";
+      const targetFov = sniperAiming ? 24 : gunAiming ? 58 : 76;
       if (Math.abs(camera.fov - targetFov) > .1) {
         camera.fov += (targetFov - camera.fov) * Math.min(1, dt * 12);
         camera.updateProjectionMatrix();
@@ -1366,8 +1445,8 @@
       const sway = Math.cos(walkingTime * .5) * (.008 + .016 * speed);
       const swapDip = weaponSwap > 0 ? Math.sin((.22 - weaponSwap) / .22 * Math.PI) * .35 : 0;
       const sideSway = THREE.MathUtils.clamp(player.vx * Math.cos(player.yaw) - player.vz * Math.sin(player.yaw), -4, 4);
-      weapon.position.set((sniperAiming ? .02 : .13) + sway + sideSway * .008, -.23 + bob - recoil * .4 - reloadDip - swapDip, (sniperAiming ? -.68 : -.78) + recoil * .45);
-      const aimScale = sniperAiming ? .8 : .7;
+      weapon.position.set((gunAiming ? .02 : .13) + sway + sideSway * .008, -.23 + bob - recoil * .4 - reloadDip - swapDip, (gunAiming ? -.68 : -.78) + recoil * .45);
+      const aimScale = gunAiming ? (sniperAiming ? .8 : .64) : .7;
       weapon.scale.setScalar(aimScale);
       const knifeArc = knifeSwing > 0 ? Math.sin((.28 - knifeSwing) / .28 * Math.PI) : 0;
       weapon.rotation.set(-.08 - recoil * 1.6 + reloadDip * .5 + knifeArc * 1.3,
@@ -1402,7 +1481,7 @@
         firing = true;
         fire();
       }
-      if (event.button === 2) aiming = inventory.selected === 1 && inventory.primary === "sniper";
+      if (event.button === 2) aiming = inventory.selected <= 2;
     }
     addEventListener("keydown", event => {
       if (event.target instanceof HTMLInputElement) return;
@@ -1526,7 +1605,10 @@
     addEventListener("blur", () => { keys.clear(); firing = false; });
     addEventListener("resize", () => {
       camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
-      renderer.setSize(innerWidth, innerHeight); renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+      maxPixelRatio = Math.min(devicePixelRatio, 1.5);
+      renderPixelRatio = Math.min(renderPixelRatio, maxPixelRatio);
+      renderer.setPixelRatio(renderPixelRatio);
+      renderer.setSize(innerWidth, innerHeight);
     });
     ui.start.addEventListener("click", () => {
       if (ui.start.textContent !== "RESUME") {
@@ -1618,13 +1700,6 @@
           resource.group.rotation.x = Math.cos(elapsed + resource.group.position.z) * .009;
         }
       }
-      const night = Math.sin(elapsed / 24 * Math.PI * 2) < -.45;
-      scene.background.set(night ? mapConfigs[selectedMap].nightSky : mapConfigs[selectedMap].sky);
-      scene.fog.color.set(night ? mapConfigs[selectedMap].nightSky : mapConfigs[selectedMap].sky);
-      skyMaterial.uniforms.topColor.value.set(night ? mapConfigs[selectedMap].nightTop : mapConfigs[selectedMap].skyTop);
-      skyMaterial.uniforms.horizonColor.value.set(night ? mapConfigs[selectedMap].nightSky : mapConfigs[selectedMap].skyHorizon);
-      ambient.intensity = night ? .75 : 2.0;
-      sun.intensity = night ? .35 : 3.0;
       if (roundStarting && (roundDelay -= dt) <= 0) {
         roundNumber++;
         startRound();
@@ -1709,19 +1784,48 @@
         fx.mesh.rotation.y += dt * 7;
         fx.mesh.scale.setScalar(Math.max(.05, fx.life / fx.maxLife));
         fx.vy -= 5 * dt; fx.mesh.material.transparent = true; fx.mesh.material.opacity = Math.max(0, fx.life / fx.maxLife);
-        if (fx.life <= 0) { scene.remove(fx.mesh); effects.splice(i, 1); }
+        if (fx.life <= 0) {
+          scene.remove(fx.mesh);
+          fx.mesh.geometry.dispose();
+          fx.mesh.material.dispose();
+          effects.splice(i, 1);
+        }
       }
       updateCamera(dt);
-      updateUI();
+      if ((uiUpdateTimer -= dt) <= 0) {
+        uiUpdateTimer = .1;
+        updateUI();
+      }
     }
+    let performanceFrames = 0;
+    let performanceWindowStart = performance.now();
     function frame(now) {
       const dt = Math.min((now - lastTime) / 1000 || 0, .04); lastTime = now;
       if (running) update(dt);
       else updateCamera(dt || .016);
+      performanceFrames++;
+      const measurementDuration = now - performanceWindowStart;
+      if (measurementDuration >= 1000) {
+        const fps = Math.round(performanceFrames * 1000 / measurementDuration);
+        ui.fps.textContent = `${fps} · ${(1000 / fps).toFixed(1)}ms`;
+        performanceFrames = 0;
+        performanceWindowStart = now;
+        if (fps < 48 && renderPixelRatio > .75) {
+          renderPixelRatio = Math.max(.75, renderPixelRatio - .15);
+          renderer.setPixelRatio(renderPixelRatio);
+          renderer.setSize(innerWidth, innerHeight);
+        } else if (fps > 58 && renderPixelRatio < maxPixelRatio) {
+          renderPixelRatio = Math.min(maxPixelRatio, renderPixelRatio + .05);
+          renderer.setPixelRatio(renderPixelRatio);
+          renderer.setSize(innerWidth, innerHeight);
+        }
+      }
+      updateAtmosphere();
       renderer.render(scene, camera);
       requestAnimationFrame(frame);
     }
     updateCamera(.016);
+    updateAtmosphere();
     updateUI();
     requestAnimationFrame(frame);
   </script>
