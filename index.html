@@ -622,13 +622,26 @@
     const skyMaterial = new THREE.ShaderMaterial({
       uniforms: {
         topColor: { value: new THREE.Color(mapConfigs.mythwood.skyTop) },
-        horizonColor: { value: new THREE.Color(mapConfigs.mythwood.skyHorizon) }
+        horizonColor: { value: new THREE.Color(mapConfigs.mythwood.skyHorizon) },
+        skyTexture: { value: null },
+        skyTextureReady: { value: 0 },
+        daylight: { value: 1 }
       },
-      vertexShader: "varying float skyHeight; void main(){ skyHeight = normalize(position).y; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }",
-      fragmentShader: "uniform vec3 topColor; uniform vec3 horizonColor; varying float skyHeight; void main(){ float blend = smoothstep(-0.15, 0.8, skyHeight); gl_FragColor = vec4(mix(horizonColor, topColor, blend), 1.0); }",
+      vertexShader: "varying float skyHeight; varying vec2 skyUv; void main(){ skyHeight = normalize(position).y; skyUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }",
+      fragmentShader: "uniform vec3 topColor; uniform vec3 horizonColor; uniform sampler2D skyTexture; uniform float skyTextureReady; uniform float daylight; varying float skyHeight; varying vec2 skyUv; void main(){ float blend = smoothstep(-0.15, 0.8, skyHeight); vec3 gradient = mix(horizonColor, topColor, blend); vec3 clouds = texture2D(skyTexture, vec2(skyUv.x, 1.0 - skyUv.y)).rgb; clouds *= mix(0.42, 1.0, daylight); float imageBlend = skyTextureReady * mix(0.48, 0.94, daylight); gl_FragColor = vec4(mix(gradient, clouds, imageBlend), 1.0); }",
       side: THREE.BackSide,
       depthWrite: false
     });
+    new THREE.TextureLoader().load(
+      "./assets/pink-cloud-sky.png",
+      texture => {
+        texture.colorSpace = THREE.SRGBColorSpace;
+        skyMaterial.uniforms.skyTexture.value = texture;
+        skyMaterial.uniforms.skyTextureReady.value = 1;
+      },
+      undefined,
+      error => console.error("Unable to load the pink cloud sky texture.", error)
+    );
     const skyDome = new THREE.Mesh(new THREE.SphereGeometry(90, 48, 32), skyMaterial);
     skyDome.frustumCulled = false;
     skyDome.renderOrder = -10;
@@ -690,6 +703,7 @@
       scene.fog.color.copy(environmentColor);
       skyMaterial.uniforms.topColor.value.lerpColors(nightTopColor, dayTopColor, daylight);
       skyMaterial.uniforms.horizonColor.value.lerpColors(nightSkyColor, dayHorizonColor, daylight);
+      skyMaterial.uniforms.daylight.value = daylight;
       ambient.intensity = .5 + daylight * 1.5;
       sun.intensity = .25 + daylight * 2.75;
       stars.material.opacity = (1 - daylight) * .9;
